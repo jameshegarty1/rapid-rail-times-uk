@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends
 from starlette.requests import Request
+from starlette.types import ASGIApp, Receive, Scope, Send, Message
 from loguru import logger
 import sys
 
@@ -7,8 +8,7 @@ import time
 import uvicorn
 
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import StreamingResponse
-from starlette.types import ASGIApp, Receive, Scope, Send
+from typing import Callable
 
 from app.api.api_v1.routers.users import users_router
 from app.api.api_v1.routers.auth import auth_router
@@ -34,42 +34,22 @@ async def db_session_middleware(request: Request, call_next):
     request.state.db.close()
     return response
 
-'''
-class LogRequestsMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        logger.info(f"Request: {request.method} {request.url}")
-
-        # Read and log the request body
-        request_body = await request.body()
-        logger.info(f"Request Body: {request_body.decode('utf-8')}")
-        return True
-
-        start_time = time.time()
-        logger.info("Calling next middleware/handler...")
-        response = await call_next(request)
-        logger.info("Returned from next middleware/handler.")
-        process_time = time.time() - start_time
-
-        # Collect and log the response body
-        response_body = b''
-        async for chunk in response.body_iterator:
-            response_body += chunk
-        
-        response = Response(
-            content=response_body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.media_type
-        )
-
-        logger.info(f"Response: {response.status_code} in {process_time} secs")
-        if response_body:
-            logger.info(f"Response Body: {response_body.decode('utf-8')}")
-
-        return response
-
-app.add_middleware(LogRequestsMiddleware)
-'''
+async def set_body(request: Request, body: bytes):
+     async def receive() -> Message:
+         return {"type": "http.request", "body": body}
+     request._receive = receive
+ 
+async def get_body(request: Request) -> bytes:
+    body = await request.body()
+    await set_body(request, body)
+    return body
+ 
+async def app_entry(request: Request, call_next: Callable):
+    body = await request.body()  # Await the body coroutine
+    await set_body(request, body)
+    print(body)  # This will print the request body
+    response = await call_next(request)
+    return response
 
 @app.get("/api/v1")
 async def root():

@@ -44,6 +44,7 @@ export const Login: FC = () => {
       const data = await login(email, password);
 
       if (data) {
+        console.log("Login success! Going to Profiles List...")
         navigate('/');
       }
     } catch (err) {
@@ -150,3 +151,5 @@ export const Login: FC = () => {
     </Paper>
   );
 };
+
+export default Login

@@ -1,8 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import axiosInstance from '/app/src/utils/api';
+import axios from 'axios';
+import {
+  Navbar,
+  NavBrand,
+  LogoutButton,
+  Container,
+  Row,
+  Col,
+  Card,
+  CardTitle,
+  Button,
+  Form,
+  Input,
+  Error,
+  TrainList,
+  TrainItem
+} from './ProfileList.styles';
+
 interface Profile {
   id: number;
   origin: string;
+  destination: string;
+}
+
+interface Train {
+  scheduled_departure: string;
+  estimated_departure: string;
   destination: string;
 }
 
@@ -10,7 +33,7 @@ const ProfileList: React.FC = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [origin, setOrigin] = useState<string>('');
   const [destination, setDestination] = useState<string>('');
-  const [trains, setTrains] = useState<any[]>([]);
+  const [trains, setTrains] = useState<Train[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -23,7 +46,12 @@ const ProfileList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axiosInstance.get('/profile/');
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/v1/profile/', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
       setProfiles(response.data);
       console.log('Profiles fetched successfully:', response.data);
     } catch (error) {
@@ -38,8 +66,12 @@ const ProfileList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axiosInstance.get('/train/train_recommendations/', {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/v1/train/train_routes/', {
         params: { origin, destination },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       setTrains(response.data);
       console.log('Train recommendations fetched successfully:', response.data);
@@ -55,9 +87,14 @@ const ProfileList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axiosInstance.post('/profile/', {
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/api/v1/profile/', {
         origin,
         destination,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       setProfiles([...profiles, response.data]);
       setOrigin('');
@@ -75,9 +112,14 @@ const ProfileList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axiosInstance.put(`/profile/${id}`, {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`/api/v1/profile/${id}`, {
         origin,
         destination,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       setProfiles(
         profiles.map((profile) => (profile.id === id ? response.data : profile))
@@ -98,7 +140,12 @@ const ProfileList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await axiosInstance.delete(`/profile/${id}`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/v1/profile/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setProfiles(profiles.filter((profile) => profile.id !== id));
       console.log('Profile deleted successfully');
     } catch (error) {
@@ -124,53 +171,64 @@ const ProfileList: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    // Redirect to login or refresh the page
+  };
+
   return (
     <div>
-      <h1>User Profiles</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={origin}
-          onChange={(e) => setOrigin(e.target.value)}
-          placeholder="Origin"
-        />
-        <input
-          type="text"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          placeholder="Destination"
-        />
-        <button type="submit" disabled={loading}>
-          {editingProfile ? 'Update Profile' : 'Create Profile'}
-        </button>
-      </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {loading && <p>Loading...</p>}
-      <ul>
-        {profiles.map((profile) => (
-          <li key={profile.id}>
-            {profile.origin} to {profile.destination}
-            <button onClick={() => handleEdit(profile)}>Edit</button>
-            <button onClick={() => deleteProfile(profile.id)}>Delete</button>
-            <button
-              onClick={() => fetchTrains(profile.origin, profile.destination)}
-            >
-              Get Train Recommendations
-            </button>
-          </li>
-        ))}
-      </ul>
-      <h2>Train Recommendations</h2>
-      <ul>
-        {trains.map((train, index) => (
-          <li key={index}>
-            {train.origin} to {train.destination} - Scheduled: {train.std} -
-            Estimated: {train.etd}
-          </li>
-        ))}
-      </ul>
+      <Navbar>
+        <NavBrand>Train App</NavBrand>
+        <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
+      </Navbar>
+
+      <Container>
+        <h1>User Profiles</h1>
+        <Form onSubmit={handleSubmit}>
+          <Input
+            type="text"
+            value={origin}
+            onChange={(e) => setOrigin(e.target.value)}
+            placeholder="Origin"
+          />
+          <Input
+            type="text"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            placeholder="Destination"
+          />
+          <Button type="submit" disabled={loading}>
+            {editingProfile ? 'Update Profile' : 'Create Profile'}
+          </Button>
+        </Form>
+        {error && <Error>{error}</Error>}
+        {loading && <p>Loading...</p>}
+
+        <Row>
+          {profiles.map((profile) => (
+            <Col key={profile.id}>
+              <Card onClick={() => fetchTrains(profile.origin, profile.destination)}>
+                <CardTitle>{profile.origin} to {profile.destination}</CardTitle>
+                <Button onClick={() => handleEdit(profile)}>Edit</Button>
+                <Button onClick={() => deleteProfile(profile.id)}>Delete</Button>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+
+        <h2>Train Recommendations</h2>
+        <TrainList>
+          {trains.map((train, index) => (
+            <TrainItem key={index}>
+              {train.scheduled_departure} to {train.destination} - Scheduled: {train.scheduled_departure} - Estimated: {train.estimated_departure}
+            </TrainItem>
+          ))}
+        </TrainList>
+      </Container>
     </div>
   );
 };
 
 export default ProfileList;
+

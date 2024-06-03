@@ -24,10 +24,12 @@ export const isAuthenticated = () => {
  */
 export const login = async (email: string, password: string) => {
   // Assert email or password is not empty
+  console.log("Processing login attempt with email:", email);
   if (!(email.length > 0) || !(password.length > 0)) {
     throw new Error('Email or password was not provided');
   }
 
+  console.log("Before making API request...");
   try {
     const data = { username: email, password: password };
     const response = await axios.post('/api/v1/auth/token', qs.stringify(data), {
@@ -35,6 +37,8 @@ export const login = async (email: string, password: string) => {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
+
+    console.log("Got a response!")
 
     const responseData = response.data;
 
@@ -46,6 +50,7 @@ export const login = async (email: string, password: string) => {
     }
 
     if ('access_token' in responseData) {
+      console.log("Saving token")
       const decodedToken: any = jwtDecode<CustomJwtPayload>(responseData.access_token);
       localStorage.setItem('token', responseData.access_token);
       localStorage.setItem('permissions', decodedToken.permissions);
