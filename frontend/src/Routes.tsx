@@ -1,14 +1,14 @@
-import { Routes, Route } from 'react-router-dom';
 import React, { FC, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { Admin } from './admin';
 import { useNavigate } from 'react-router';
 import Home from './components/Home';
 import Login from './components/Login';
 import SignUp from './components/SignUp';
-import { Admin } from './admin';
 import ProfileList from './components/ProfileList';
 import { logout } from './utils/auth';
 
-const AppRoutes: FC = () => {
+export default function AppRoutes() {
   useEffect(() => {
     console.log('AppRoutes mounted');
   }, []);
@@ -36,6 +36,3 @@ const LogoutHandler: FC = () => {
 
   return null;
 };
-
-export default AppRoutes;
-

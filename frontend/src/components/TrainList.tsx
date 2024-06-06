@@ -6,12 +6,7 @@ interface Train {
   estimated_departure: string;
   destination: string;
 }
-
-interface TrainListProps {
-  trains: Train[];
-}
-
-const TrainList: React.FC<TrainListProps> = ({ trains }) => {
+export default function TrainList({trains}: {trains: Train[]}) {
   return (
     <StyledTrainList>
       {trains.map((train, index) => (
@@ -22,6 +17,3 @@ const TrainList: React.FC<TrainListProps> = ({ trains }) => {
     </StyledTrainList>
   );
 };
-
-export default TrainList;
-

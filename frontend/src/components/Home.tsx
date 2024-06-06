@@ -2,7 +2,7 @@ import React, { FC, useState } from 'react';
 import { isAuthenticated } from '../utils/auth';
 import { Container, Navbar, NavLinks, NavLink, AuthContainer, Button, Message } from './Home.styles';
 
-export const Home: FC = () => {
+export default function Home() {
   console.log('Home component rendered');
   const [message, setMessage] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -40,6 +40,3 @@ export const Home: FC = () => {
     </Container>
   );
 };
-
-export default Home;
-

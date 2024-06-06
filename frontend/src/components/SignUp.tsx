@@ -23,7 +23,7 @@ const useStyles = {
   `,
 };
 
-export const SignUp: FC = () => {
+export default function SignUp() {
   const classes = useStyles;
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>('');
@@ -136,5 +136,3 @@ export const SignUp: FC = () => {
     </Paper>
   );
 };
-
-export default SignUp

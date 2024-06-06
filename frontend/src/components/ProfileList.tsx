@@ -16,6 +16,7 @@ import {
   TrainList,
   TrainItem
 } from './ProfileList.styles';
+import ProfileForm from './ProfileForm';
 
 interface Profile {
   id: number;
@@ -29,7 +30,7 @@ interface Train {
   destination: string;
 }
 
-const ProfileList: React.FC = () => {
+export default function ProfileList() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [origin, setOrigin] = useState<string>('');
   const [destination, setDestination] = useState<string>('');
@@ -229,6 +230,3 @@ const ProfileList: React.FC = () => {
     </div>
   );
 };
-
-export default ProfileList;
-

@@ -1,22 +1,19 @@
 import React from 'react';
 import { Card, CardTitle, Button } from './ProfileList.styles';
 
-interface ProfileCardProps {
-  id: number;
-  origin: string;
-  destination: string;
-  onEdit: () => void;
-  onDelete: () => void;
-  onClick: () => void;
-}
-
-const ProfileCard: React.FC<ProfileCardProps> = ({
+export default function ProfileCard({
   origin,
   destination,
   onEdit,
   onDelete,
   onClick,
-}) => {
+}: {
+  origin: string;
+  destination: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  onClick: () => void;
+}) {
   return (
     <Card onClick={onClick}>
       <CardTitle>{origin} to {destination}</CardTitle>
@@ -25,6 +22,3 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
     </Card>
   );
 };
-
-export default ProfileCard;
-

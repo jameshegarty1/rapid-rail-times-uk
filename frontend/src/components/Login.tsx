@@ -31,7 +31,7 @@ const useStyles = {
   `,
 };
 
-export const Login: FC = () => {
+export default function Login() {
   const classes = useStyles;
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>('');
@@ -152,4 +152,3 @@ export const Login: FC = () => {
   );
 };
 
-export default Login

@@ -2,19 +2,16 @@ import React from 'react';
 import { Navbar as StyledNavbar, NavBrand, LogoutButton } from './ProfileList.styles';
 import { useNavigate } from 'react-router';
 
-interface NavbarProps {
-  onLogout: () => ;
-}
-
-const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
+export default function Navbar({onLogout}: { onLogout: () => void}) {
   const navigate = useNavigate();
+  const handleLogout = () => {
+    onLogout();
+    navigate('/logout');
+  };
   return (
     <StyledNavbar>
       <NavBrand>Train App</NavBrand>
-      <LogoutButton onClick={onLogout}>Logout</LogoutButton>
+      <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
     </StyledNavbar>
   );
 };
-
-export default Navbar;
-
