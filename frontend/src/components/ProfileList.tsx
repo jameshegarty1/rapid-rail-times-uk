@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Navbar,
-  NavBrand,
-  LogoutButton,
   Container,
   Row,
   Col,
@@ -17,6 +14,9 @@ import {
   TrainItem
 } from './ProfileList.styles';
 import ProfileForm from './ProfileForm';
+import Navbar from './Navbar'
+import { useNavigate } from 'react-router-dom';
+import { MultiValue, ActionMeta } from 'react-select';
 
 interface Profile {
   id: number;
@@ -32,8 +32,8 @@ interface Train {
 
 export default function ProfileList() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [origin, setOrigin] = useState<string>('');
-  const [destination, setDestination] = useState<string>('');
+  const [origins, setOrigins] = useState<string[]>([]);
+  const [destinations, setDestinations] = useState<string[]>([]);
   const [trains, setTrains] = useState<Train[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +43,10 @@ export default function ProfileList() {
     fetchProfiles();
   }, []);
 
+  const navigate = useNavigate();
+
   const fetchProfiles = async () => {
+    console.log("Fetching profiles")
     setLoading(true);
     setError(null);
     try {
@@ -64,6 +67,7 @@ export default function ProfileList() {
   };
 
   const fetchTrains = async (origin: string, destination: string) => {
+    console.log("Trying to fetch trains with origins: ", origins, " destinations: ", destinations);
     setLoading(true);
     setError(null);
     try {
@@ -84,22 +88,23 @@ export default function ProfileList() {
     }
   };
 
-  const createProfile = async () => {
+  const createProfile = async (origins: string[], destinations: string[]) => {
+    console.log("Trying to create profile with origins: ", origins, " destinations: ", destinations);
     setLoading(true);
     setError(null);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post('/api/v1/profile/', {
-        origin,
-        destination,
+        origins,
+        destinations,
       }, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       setProfiles([...profiles, response.data]);
-      setOrigin('');
-      setDestination('');
+      setOrigins([]);
+      setDestinations([]);
       console.log('Profile created successfully:', response.data);
     } catch (error) {
       setError('Error creating profile');
@@ -109,14 +114,15 @@ export default function ProfileList() {
     }
   };
 
-  const updateProfile = async (id: number) => {
+  const updateProfile = async (id: number, origins: string[], destinations: string[]) => {
+    console.log("Trying to update profile with id: ", id);
     setLoading(true);
     setError(null);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.put(`/api/v1/profile/${id}`, {
-        origin,
-        destination,
+        origins,
+        destinations,
       }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -125,8 +131,8 @@ export default function ProfileList() {
       setProfiles(
         profiles.map((profile) => (profile.id === id ? response.data : profile))
       );
-      setOrigin('');
-      setDestination('');
+      setOrigins([]);
+      setDestinations([]);
       setEditingProfile(null);
       console.log('Profile updated successfully:', response.data);
     } catch (error) {
@@ -136,7 +142,6 @@ export default function ProfileList() {
       setLoading(false);
     }
   };
-
   const deleteProfile = async (id: number) => {
     setLoading(true);
     setError(null);
@@ -157,52 +162,53 @@ export default function ProfileList() {
     }
   };
 
+  const handleSelectChange = (selectedOptions: MultiValue<{ label: string; value: string }>, actionMeta: ActionMeta<{ label: string; value: string }>, fieldName: string) => {
+    console.log('Select change action:', actionMeta.name, 'selected options:', selectedOptions);
+    if (fieldName === 'origins') {
+      setOrigins(selectedOptions.map(option => option.value));
+    } else if (fieldName === 'destinations') {
+      setDestinations(selectedOptions.map(option => option.value));
+    }
+  };
+
   const handleEdit = (profile: Profile) => {
-    setOrigin(profile.origin);
-    setDestination(profile.destination);
+    console.log('Editing profile:', profile);
+    setOrigins([profile.origin]);
+    setDestinations([profile.destination]);
     setEditingProfile(profile);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submitting form with origins:', origins, 'and destinations:', destinations);
     if (editingProfile) {
-      updateProfile(editingProfile.id);
+      updateProfile(editingProfile.id, origins, destinations);
     } else {
-      createProfile();
+      createProfile(origins, destinations);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    // Redirect to login or refresh the page
+    console.log('Logging out');
+    navigate('/logout');
   };
 
   return (
     <div>
-      <Navbar>
-        <NavBrand>Train App</NavBrand>
-        <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
-      </Navbar>
+      <Navbar onLogout={handleLogout}/>
 
       <Container>
         <h1>User Profiles</h1>
-        <Form onSubmit={handleSubmit}>
-          <Input
-            type="text"
-            value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-            placeholder="Origin"
-          />
-          <Input
-            type="text"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            placeholder="Destination"
-          />
-          <Button type="submit" disabled={loading}>
-            {editingProfile ? 'Update Profile' : 'Create Profile'}
-          </Button>
-        </Form>
+        <ProfileForm
+          origins={origins}
+          destinations={destinations}
+          loading={loading}
+          onChange={handleSelectChange}
+          onSubmit={handleSubmit}
+          editingProfile={editingProfile !== null}
+          maxOrigins={3}
+        />
+        
         {error && <Error>{error}</Error>}
         {loading && <p>Loading...</p>}
 

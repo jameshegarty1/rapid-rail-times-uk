@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Select, { MultiValue, ActionMeta } from 'react-select';
+import Select, { MultiValue, ActionMeta, InputActionMeta } from 'react-select';
 import Fuse from 'fuse.js';
 import { Form, Input, Button } from './ProfileList.styles';
 
@@ -10,13 +10,15 @@ export default function ProfileForm({
   onChange,
   onSubmit,
   editingProfile,
+  maxOrigins
 }: {
   origins: string[];
   destinations: string[];
   loading: boolean;
-  onChange: (selectedOptions: MultiValue<{ label: string; value: string }>, actionMeta: ActionMeta<{ label: string; value: string }>) => void;
+  onChange: (selectedOptions: MultiValue<{ label: string; value: string }>, actionMeta: ActionMeta<{ label: string; value: string }>, fieldName: string) => void;
   onSubmit: (e: React.FormEvent) => void;
-  editingProfile: boolean; 
+  editingProfile: boolean;
+  maxOrigins: number
 }) {
 
   const initialOptions = [
@@ -34,25 +36,34 @@ export default function ProfileForm({
     threshold: 0.3, // Adjust threshold according to your needs
   });
 
-  const handleInputChange = (inputValue: string) => {
-    if (!inputValue) {
-      setFilteredOptions(options);
-      return;
-    }
-    const results = fuse.search(inputValue);
-    setFilteredOptions(results.map(result => result.item));
-    for (let i=0; i< results.length; i++) {
-      console.log("Item" + results[i].item)
+  const handleInputChange = (inputValue: string, { action }: InputActionMeta) => {
+    console.log('Input change:', inputValue);
+    if (action === 'input-change') {
+      if (!inputValue) {
+        setFilteredOptions(options);
+        return;
+      }
+      const results = fuse.search(inputValue);
+      setFilteredOptions(results.map(result => result.item));
+      results.forEach(result => {
+        console.log("Item", result.item);
+      });
     }
   };
-
   return (
     <Form onSubmit={onSubmit}>
       <Select
         options={filteredOptions}
         isMulti
         value={origins.map(origin => ({ label: origin, value: origin }))}
-        onChange={(selectedOptions, actionMeta) => onChange(selectedOptions as MultiValue<{ label: string; value: string }>, actionMeta)}
+        onChange={(selectedOptions, actionMeta) => {
+          console.log('Origins onChange called', selectedOptions, actionMeta);
+          if (selectedOptions.length > maxOrigins) {
+            console.warn(`Maximum of ${maxOrigins} options can be selected`);
+            return;
+          }
+          onChange(selectedOptions as MultiValue<{ label: string; value: string }>, actionMeta, 'origins');
+        }}
         placeholder="Select origins"
         onInputChange={handleInputChange}
         backspaceRemovesValue
@@ -64,8 +75,10 @@ export default function ProfileForm({
         isMulti
         options={filteredOptions}
         value={destinations.map(destination => ({ label: destination, value: destination }))}
-        onChange={(selectedOptions, actionMeta) => onChange(selectedOptions as MultiValue<{ label: string; value: string }>, actionMeta)}
-        placeholder="Select destinations"
+        onChange={(selectedOptions, actionMeta) => {
+          console.log('Destinations onChange called', selectedOptions, actionMeta);
+          onChange(selectedOptions as MultiValue<{ label: string; value: string }>, actionMeta, 'destinations');
+        }}        placeholder="Select destinations"
         onInputChange={handleInputChange}
         backspaceRemovesValue
         tabSelectsValue
