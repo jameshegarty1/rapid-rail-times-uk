@@ -22,10 +22,10 @@ export default function ProfileForm({
 }) {
 
   const initialOptions = [
-    { label: 'London Bridge', value: 'LBG' },
-    { label: 'London Victoria', value: 'VIC' },
-    { label: 'Blackheath', value: 'BKH' },
-    { label: 'Hither Green', value: 'HGR' }
+    { label: 'London Bridge (LBG)', value: 'LBG' },
+    { label: 'London Victoria (VIC)', value: 'VIC' },
+    { label: 'Blackheath (BKH)', value: 'BKH' },
+    { label: 'Hither Green (HGR)', value: 'HGR' }
   ];
 
   const [options, setOptions] = useState(initialOptions);
