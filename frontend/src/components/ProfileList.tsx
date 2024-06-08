@@ -14,14 +14,15 @@ import {
   TrainItem
 } from './ProfileList.styles';
 import ProfileForm from './ProfileForm';
+import ProfileCard from './ProfileCard';
 import Navbar from './Navbar'
 import { useNavigate } from 'react-router-dom';
 import { MultiValue, ActionMeta } from 'react-select';
 
 interface Profile {
   id: number;
-  origin: string;
-  destination: string;
+  origins: string[];
+  destinations: string[];
 }
 
 interface Train {
@@ -66,14 +67,14 @@ export default function ProfileList() {
     }
   };
 
-  const fetchTrains = async (origin: string, destination: string) => {
+  const fetchTrains = async (origins: string[], destinations: string[]) => {
     console.log("Trying to fetch trains with origins: ", origins, " destinations: ", destinations);
     setLoading(true);
     setError(null);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/v1/train/train_routes/', {
-        params: { origin, destination },
+        params: { origins, destinations },
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -173,8 +174,8 @@ export default function ProfileList() {
 
   const handleEdit = (profile: Profile) => {
     console.log('Editing profile:', profile);
-    setOrigins([profile.origin]);
-    setDestinations([profile.destination]);
+    setOrigins(profile.origins);
+    setDestinations(profile.destinations);
     setEditingProfile(profile);
   };
 
@@ -187,6 +188,11 @@ export default function ProfileList() {
       createProfile(origins, destinations);
     }
   };
+
+  const handleCardClick = (profile: Profile) => {
+    console.log('Clicked on profile:', profile);
+    fetchTrains(profile.origins, profile.destinations);
+  }
 
   const handleLogout = () => {
     console.log('Logging out');
@@ -215,11 +221,13 @@ export default function ProfileList() {
         <Row>
           {profiles.map((profile) => (
             <Col key={profile.id}>
-              <Card onClick={() => fetchTrains(profile.origin, profile.destination)}>
-                <CardTitle>{profile.origin} to {profile.destination}</CardTitle>
-                <Button onClick={() => handleEdit(profile)}>Edit</Button>
-                <Button onClick={() => deleteProfile(profile.id)}>Delete</Button>
-              </Card>
+              <ProfileCard
+                origins={profile.origins}
+                destinations={profile.destinations}
+                onEdit={() => handleEdit(profile)}
+                onDelete={() => deleteProfile(profile.id)}
+                onClick={() => handleCardClick(profile)}
+              />
             </Col>
           ))}
         </Row>

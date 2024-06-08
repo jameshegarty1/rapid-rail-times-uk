@@ -6,7 +6,6 @@ import sys
 
 import time
 import uvicorn
-import json
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from typing import Callable
@@ -27,26 +26,37 @@ app = FastAPI(
     )
 
 logger.add(sys.stdout, format="{time} {level} {message}", level="DEBUG")
-'''
+
+@app.middleware("http")
+async def db_session_middleware(request: Request, call_next):
+    request.state.db = SessionLocal()
+    response = await call_next(request)
+    request.state.db.close()
+    return response
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     logger.info(f"Request path: {request.url.path}")
-
     body = await request.body()
-    try:
-        body = body.decode('utf-8')
-        logger.info(f"Request body: {body}")
-    except UnicodeDecodeError:
-        logger.info(f"Request body (binary): {body}")
-
-    async def receive():
-        return {"type": "http.request", "body": body}
-
-    request._receive = receive
-    response = await call_next(request)
+    logger.info(f"Request body: {body.decode('utf-8')}")    response = await call_next(request)
     logger.info(f"Response status code: {response.status_code}")
     return response
-'''
+async def set_body(request: Request, body: bytes):
+     async def receive() -> Message:
+         return {"type": "http.request", "body": body}
+     request._receive = receive
+ 
+async def get_body(request: Request) -> bytes:
+    body = await request.body()
+    await set_body(request, body)
+    return body
+ 
+async def app_entry(request: Request, call_next: Callable):
+    body = await request.body()  # Await the body coroutine
+    await set_body(request, body)
+    print(body)  # This will print the request body
+    response = await call_next(request)
+    return response
+
 @app.get("/api/v1")
 async def root():
     return {"message": "Hello World"}

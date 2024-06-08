@@ -1,8 +1,9 @@
 from pydantic import BaseModel
+from typing import List
 
 class ProfileBase(BaseModel):
-    origin: str
-    destination: str
+    origins: List[str]
+    destinations: List[str]
 
 class ProfileCreate(ProfileBase):
     pass
@@ -15,4 +16,4 @@ class Profile(ProfileBase):
     user_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
