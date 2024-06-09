@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { fetchProfiles, fetchTrains, createProfile, updateProfile, deleteProfile } from '../utils/api';
+import { fetchTrains as fetchTrainsApi } from '../utils/api';
 
 interface Profile {
   id: number;
@@ -13,11 +14,20 @@ interface Train {
   destination: string;
 }
 
+interface LinkedTrainData {
+  [profileId: number]: Train[];
+}
+
+interface MemoizedData {
+  trains: Train[];
+  lastFetchTime: Date;
+}
+
 interface UseProfilesReturn {
   profiles: Profile[];
   origins: string[];
   destinations: string[];
-  trains: Train[];
+  linkedTrainsData: { [profileId: number]: Train[] };
   loading: boolean;
   error: string | null;
   editingProfile: Profile | null;
@@ -27,20 +37,25 @@ interface UseProfilesReturn {
   handleCreateProfile: (origins: string[], destinations: string[]) => Promise<void>;
   handleUpdateProfile: (id: number, origins: string[], destinations: string[]) => Promise<void>;
   handleDeleteProfile: (id: number) => Promise<void>;
-  handleFetchTrains: (origins: string[], destinations: string[]) => Promise<void>;
-  setTrains: React.Dispatch<React.SetStateAction<Train[]>>;
+  handleFetchTrains: (origins: string[], destinations: string[], profileId: number, forceFetch?: boolean) => Promise<void>;
+  setLinkedTrainsData: React.Dispatch<React.SetStateAction<{ [profileId: number]: Train[] }>>;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  lastFetchTime: { [profileId: number]: Date | null };
+  setLastFetchTime: React.Dispatch<React.SetStateAction<{ [profileId: number]: Date | null }>>;
 }
 
 export default function useProfiles(): UseProfilesReturn {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [origins, setOrigins] = useState<string[]>([]);
   const [destinations, setDestinations] = useState<string[]>([]);
-  const [trains, setTrains] = useState<Train[]>([]);
+  const [linkedTrainsData, setLinkedTrainsData] = useState<LinkedTrainData>({});
+  const [lastFetchTime, setLastFetchTime] = useState<{ [profileId: number]: Date | null }>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+
+  const memoizedTrains = useRef<{ [key: string]: MemoizedData }>({});
 
   useEffect(() => {
     const loadProfiles = async () => {
@@ -103,16 +118,29 @@ export default function useProfiles(): UseProfilesReturn {
     }
   };
 
-  const handleFetchTrains = async (origins: string[], destinations: string[]) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const trainsData = await fetchTrains(origins, destinations);
-      setTrains(trainsData);
-    } catch (error) {
-      setError('Error fetching trains');
-    } finally {
-      setLoading(false);
+  const handleFetchTrains = async (origins: string[], destinations: string[], profileId: number, forceFetch = false) => {
+    const cacheKey = `${origins.join('-')}_${destinations.join('-')}`;
+    if (!forceFetch && memoizedTrains.current[cacheKey]) {
+      console.log('Returning cached data');
+      const cachedData = memoizedTrains.current[cacheKey];
+      setLinkedTrainsData(prevState => ({ ...prevState, [profileId]: cachedData.trains }));
+      setLastFetchTime(prevState => ({ ...prevState, [profileId]: new Date(cachedData.lastFetchTime) }));
+    } else {
+      console.log('Fetching new data');
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchTrainsApi(origins, destinations, forceFetch);
+        const fetchTime = new Date();
+        memoizedTrains.current[cacheKey] = { trains: data, lastFetchTime: fetchTime };
+        console.log("Got data. Adding to cache.")
+        setLinkedTrainsData(prevState => ({ ...prevState, [profileId]: data }));
+        setLastFetchTime(prevState => ({ ...prevState, [profileId]: fetchTime }));
+      } catch (error) {
+        setError('Error fetching trains');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -120,7 +148,7 @@ export default function useProfiles(): UseProfilesReturn {
     profiles,
     origins,
     destinations,
-    trains,
+    linkedTrainsData,
     loading,
     error,
     editingProfile,
@@ -131,9 +159,11 @@ export default function useProfiles(): UseProfilesReturn {
     handleUpdateProfile,
     handleDeleteProfile,
     handleFetchTrains,
-    setTrains,
+    setLinkedTrainsData,
     setLoading,
-    setError
+    setError,
+    lastFetchTime,
+    setLastFetchTime
   };
 }
 

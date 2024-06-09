@@ -13,11 +13,12 @@ interface Train {
   destination: string;
 }
 
-export const fetchTrains = async (origins: string[], destinations: string[]): Promise<Train[]> => {
+export const fetchTrains = async (origins: string[], destinations: string[], forceFetch = false): Promise<Train[]> => {
   const response = await axiosInstance.get('/api/v1/train/train_routes/', {
     params: {
       origins,
       destinations,
+      forceFetch
     },
   });
   return response.data.result;

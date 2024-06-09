@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Container,
   Row,
@@ -9,8 +9,6 @@ import {
 } from './ProfileList.styles';
 import ProfileForm from './ProfileForm';
 import ProfileCard from './ProfileCard';
-import Navbar from './Navbar'
-import { useNavigate } from 'react-router-dom';
 import { MultiValue, ActionMeta } from 'react-select';
 import { fetchTrains as fetchTrainsApi } from '../utils/api';
 import useProfiles from '../hooks/useProfiles';
@@ -27,17 +25,12 @@ interface Train {
   destination: string;
 }
 
-interface MemoizedData {
-  trains: Train[];
-  lastFetchTime: Date;
-}
-
 export default function ProfileList() {
   const {
     profiles,
     origins,
     destinations,
-    trains,
+    linkedTrainsData,
     loading,
     error,
     editingProfile,
@@ -48,40 +41,25 @@ export default function ProfileList() {
     handleUpdateProfile,
     handleDeleteProfile,
     handleFetchTrains,
-    setTrains,
+    setLinkedTrainsData,
     setLoading,
-    setError
+    setError,
+    lastFetchTime,
+    setLastFetchTime
   } = useProfiles();
 
-  const navigate = useNavigate();
 
-  const memoizedTrains = useRef<{ [key: string]: MemoizedData }>({});
 
-  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
-
-  const fetchTrains = async (origins: string[], destinations: string[]) => {
-    const cacheKey = `${origins.join('-')}_${destinations.join('-')}`;
-    if (memoizedTrains.current[cacheKey]) {
-      console.log('Returning cached data');
-      const cachedData = memoizedTrains.current[cacheKey];
-      setTrains(cachedData.trains);
-      setLastFetchTime(new Date(cachedData.lastFetchTime));
-    } else {
-      console.log('Fetching new data');
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchTrainsApi(origins, destinations);
-        memoizedTrains.current[cacheKey] = { trains: data, lastFetchTime: new Date() };
-        setTrains(data);
-        setLastFetchTime(new Date());
-      } catch (error) {
-        setError('Error fetching trains');
-      } finally {
-        setLoading(false);
+  useEffect(() => {
+    console.log("Pre-loading trains for each profile.");
+    const preloadTrainData = async () => {
+      for (const profile of profiles) {
+        await handleFetchTrains(profile.origins, profile.destinations, profile.id);
       }
-    }
-  };
+    };
+
+    preloadTrainData();
+  }, [profiles]); 
 
   const handleSelectChange = (selectedOptions: MultiValue<{ label: string; value: string }>, actionMeta: ActionMeta<{ label: string; value: string }>, fieldName: string) => {
     console.log('Select change action:', actionMeta.name, 'selected options:', selectedOptions);
@@ -109,20 +87,18 @@ export default function ProfileList() {
     }
   };
 
-  const handleCardClick = (profile: Profile) => {
-    console.log('Clicked on profile:', profile);
-    fetchTrains(profile.origins, profile.destinations);
+  const handleRefreshTrains = (profile: Profile) => {
+    console.log('Refreshing train data for profile:', profile);
+    handleFetchTrains(profile.origins, profile.destinations, profile.id, true);
   };
 
-const handleLogout = () => {
-    console.log('Logging out');
-    navigate('/logout');
+  const handleCardClick = (profile: Profile) => {
+    console.log('Clicked on profile:', profile);
+    handleFetchTrains(profile.origins, profile.destinations, profile.id);
   };
 
  return (
     <div>
-      <Navbar onLogout={handleLogout} />
-
       <Container>
         <h1>User Profiles</h1>
         <ProfileForm
@@ -136,7 +112,6 @@ const handleLogout = () => {
         />
 
         {error && <Error>{error}</Error>}
-        {loading && <p>Loading...</p>}
 
         <Row>
           {profiles.map((profile) => (
@@ -146,20 +121,14 @@ const handleLogout = () => {
                 destinations={profile.destinations}
                 onEdit={() => handleEdit(profile)}
                 onDelete={() => handleDeleteProfile(profile.id)}
+                onRefresh={() => handleRefreshTrains(profile)}
                 onClick={() => handleCardClick(profile)}
+                trains={linkedTrainsData[profile.id]}
+                lastFetchTime={lastFetchTime[profile.id]}
               />
             </Col>
           ))}
         </Row>
-
-        <h2>Train Recommendations</h2>
-        <TrainList>
-          {trains.map((train, index) => (
-            <TrainItem key={index}>
-              {train.scheduled_departure} to {train.destination} - Scheduled: {train.scheduled_departure} - Estimated: {train.estimated_departure}
-            </TrainItem>
-          ))}
-        </TrainList>
       </Container>
     </div>
   );

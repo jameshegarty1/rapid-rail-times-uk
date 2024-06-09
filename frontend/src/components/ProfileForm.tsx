@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Select, { MultiValue, ActionMeta, InputActionMeta } from 'react-select';
 import Fuse from 'fuse.js';
-import { Form, Input, Button } from './ProfileList.styles';
+import { Form, Button } from './ProfileList.styles';
 
 export default function ProfileForm({
   origins,

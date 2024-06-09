@@ -7,11 +7,33 @@ interface CustomJwtPayload extends JwtPayload {
 }
 
 export const isAuthenticated = () => {
-  const permissions = localStorage.getItem('permissions');
-  if (!permissions) {
+  const token = localStorage.getItem('token');
+  if (!token) {
     return false;
   }
-  return !!(permissions === 'user' || permissions === 'admin');
+
+  try {
+    const decodedToken = jwtDecode<CustomJwtPayload>(token);
+    const currentTime = Date.now() / 1000;
+
+    if (decodedToken.exp && decodedToken.exp < currentTime) {
+      console.log("Token has expired.")
+      localStorage.removeItem('token');
+      localStorage.removeItem('permissions');
+      return false;
+    }
+
+    console.log("Login token is still valid.")
+
+    const permissions = localStorage.getItem('permissions');
+    return !!(permissions === 'user' || permissions === 'admin');
+  } catch (error) {
+    console.log("Error occurred. Setting as unauthenticated...")
+    // Token is invalid
+    localStorage.removeItem('token');
+    localStorage.removeItem('permissions');
+    return false;
+  }
 };
 
 /**

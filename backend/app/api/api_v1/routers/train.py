@@ -10,11 +10,16 @@ import time
 train_router = APIRouter()
 
 @train_router.get("/train_routes/")
-async def read_train_routes(origins: List[str] = Query(..., alias="origins[]"), destinations: List[str] = Query(..., alias="destinations[]")):
-    logger.info(f"Requested routes for {origins} to {destinations}")
+async def read_train_routes(
+    origins: List[str] = Query(..., alias="origins[]"), 
+    destinations: List[str] = Query(..., alias="destinations[]"),
+    forceFetch: bool = Query(False)
+):
+
+    logger.info(f"Requested routes for {origins} to {destinations} with forceFetch={forceFetch}")
 
     try:
-        task = get_train_routes_task.delay(origins, destinations)
+        task = get_train_routes_task.delay(origins, destinations, forceFetch)
         logger.info(f"Task ID: {task.id}")
         
         while not task.ready():

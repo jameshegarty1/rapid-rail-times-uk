@@ -33,13 +33,19 @@ def create_soap_client(wsdl: str, token: str) -> Client:
 
     return client
 
-def get_train_routes(origins: List[str], destinations: List[str]) -> List[dict]:
-    cache_key = f"train_routes:{'-'.join(origins)}:{'-'.join(destinations)}"
-    cached_data = redis_client_cache.get(cache_key)
+def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bool) -> List[dict]:
+    logger.info(f"Fetching train routes for {origins} to {destinations} with forceFetch={forceFetch}")
+    
+    # Implement caching logic here
+    # If forceFetch is True, skip the cache and fetch fresh data
 
-    if cached_data:
-        logger.info("Returning cached data")
-        return json.loads(cached_data)
+    cache_key = f"train_routes:{'-'.join(origins)}:{'-'.join(destinations)}"
+
+    if not forceFetch:
+        cached_data = redis_client_cache.get(cache_key)
+        if cached_data:
+            logger.info("Returning cached data")
+            return cached_data
 
     client = create_soap_client(WSDL, LDB_TOKEN)
     london_tz = pytz.timezone('Europe/London')
@@ -109,7 +115,7 @@ def get_train_routes(origins: List[str], destinations: List[str]) -> List[dict]:
                 logger.error(f"Error fetching train routes: {e}")
                 raise HTTPException(status_code=500, detail="Failed to fetch train routes")
 
-    redis_client_cache.setex(cache_key, timedelta(minutes=5), json.dumps(train_info_arr))
+    redis_client_cache.setex(cache_key, timedelta(minutes=2), json.dumps(train_info_arr))
     logger.info("Data cached")
     return train_info_arr
 
@@ -125,7 +131,6 @@ def filter_trains_by_destinations(train_data, destinations):
             matches = True
 
     return matches
-
 
 def serialize_calling_points(calling_points):
     logger.info("Attempting serialization...")
