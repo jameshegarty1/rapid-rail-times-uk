@@ -1,4 +1,4 @@
-import os
+from app.core.celery_app import celery_app
 from loguru import logger
 from typing import List
 from zeep import Client, Settings, xsd
@@ -28,31 +28,42 @@ def create_soap_client(wsdl: str, token: str) -> Client:
 
     return client
 
-def get_train_routes(origin: str, destination: str) -> List[dict]:
+def get_train_routes(origins: List[str], destinations: List[str]) -> List[dict]:
     client = create_soap_client(WSDL, LDB_TOKEN)
 
-    try:
-        response = client.service.GetDepBoardWithDetails(numRows=10, crs=origin)
-        if response.trainServices is None:
-            raise HTTPException(status_code=404, detail="No train services found")
+    logger.info("in get_train_routes")
+
+    for origin in origins:
+        try:
+            response = client.service.GetDepBoardWithDetails(numRows=10, crs=origin)
+            if response.trainServices is None:
+                raise HTTPException(status_code=404, detail="No train services found")
         
-        services = response.trainServices.service
-        logger.info(f"Trains at {response.locationName}")
-        logger.info("===============================================================================")
+            services = response.trainServices.service
+            logger.info(f"Trains at {response.locationName}")
+            logger.info("===============================================================================")
 
-        train_info = []
-        for service in services:
-            train_data = {
-                "scheduled_departure": service.std,
-                "estimated_departure": service.etd,
-                "destination": service.destination.location[0].locationName
-            }
-            logger.info(f"{train_data['scheduled_departure']} to {train_data['destination']} - {train_data['estimated_departure']}")
-            train_info.append(train_data)
+            train_info = []
+            for service in services:
+                train_data = {
+                    "service_id": service.serviceID,
+                    "scheduled_departure": service.std,
+                    "estimated_departure": service.etd,
+                    "platform": service.platform,
+                    "destination": service.destination.location[0].locationName,
+                    "via": service.destination.location[0].via,
+                    "length": service.length,
+                    "operator": service.operator,
+                    "subsequent_calling_points": service.subsequentCallingPoints
+                }
 
-        return train_info
+                calling_points = train_data["subsequent_calling_points"]
+                logger.info(calling_points)
+                logger.info(f"{train_data['scheduled_departure']} to {train_data['destination']} - {train_data['estimated_departure']}")
+                train_info.append(train_data)
 
-    except Exception as e:
-        logger.error(f"Error fetching train routes: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch train routes")
+            return train_info
 
+        except Exception as e:
+            logger.error(f"Error fetching train routes: {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch train routes")

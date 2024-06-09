@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import {
   Container,
   Row,
@@ -68,26 +68,52 @@ export default function ProfileList() {
   };
 
   const fetchTrains = async (origins: string[], destinations: string[]) => {
-    console.log("Trying to fetch trains with origins: ", origins, " destinations: ", destinations);
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/train/train_routes/', {
-        params: { origins, destinations },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setTrains(response.data);
-      console.log('Train recommendations fetched successfully:', response.data);
-    } catch (error) {
-      setError('Error fetching trains');
-      console.error('Error fetching trains:', error);
-    } finally {
-      setLoading(false);
+  console.log("Trying to fetch trains with origins: ", origins, " destinations: ", destinations);
+
+  setLoading(true);
+  setError(null);
+
+  const token = localStorage.getItem('token');
+
+  try {
+    const response = await axios.get('/api/v1/train/train_routes/', {
+      params: {
+        origins: origins,
+        destinations: destinations,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const trainsData = response.data.result;
+
+    if (Array.isArray(trainsData)) {
+      setTrains(trainsData);
+    } else {
+      console.error('Expected an array but got:', trainsData);
+      setError('Invalid train data format received from the server');
+      setTrains([]);
     }
-  };
+    console.log('Train recommendations fetched successfully:', response.data);
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        // Ensure error is set to a string
+        setError(error.message);
+      } else {
+        console.error('Error message:', error.message);
+        setError(error.message);
+      }
+    } else {
+      console.error('Unexpected error:', error);
+      setError('An unexpected error occurred');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const createProfile = async (origins: string[], destinations: string[]) => {
     console.log("Trying to create profile with origins: ", origins, " destinations: ", destinations);

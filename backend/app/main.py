@@ -26,7 +26,7 @@ app = FastAPI(
     title=config.PROJECT_NAME, docs_url="/api/docs", openapi_url="/api"
     )
 
-logger.add(sys.stdout, format="{time} {level} {message}", level="DEBUG")
+#logger.add('debug.log', format="{time} {level} {message}", level="DEBUG")
 '''
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -47,6 +47,7 @@ async def log_requests(request: Request, call_next):
     logger.info(f"Response status code: {response.status_code}")
     return response
 '''
+
 @app.get("/api/v1")
 async def root():
     return {"message": "Hello World"}

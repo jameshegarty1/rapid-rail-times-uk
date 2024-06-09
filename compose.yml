@@ -35,15 +35,22 @@ services:
     build:
       context: backend
       dockerfile: Dockerfile
-    command: celery --app app.tasks worker --loglevel=DEBUG -Q main-queue -c 1
+    command: celery --app app.core.celery_app worker --loglevel=DEBUG -Q main-queue -c 1
+    depends_on:
+      - "redis"
+      - "backend"
 
   flower:  
     image: mher/flower
-    command: celery flower --broker=redis://redis:6379/0 --port=5555
-    ports:  
-        - 5555:5555
+    command: celery flower --port=5555
+    ports:
+      - 5556:5555
     depends_on:
       - "redis"
+      - "worker"
+      - "backend"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
 
   backend:
     build:
