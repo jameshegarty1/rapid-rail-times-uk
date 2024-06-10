@@ -1,15 +1,22 @@
 from typing import List
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.db.models import profile_model
 from app.db.schemas.profile_schema import ProfileCreate, ProfileUpdate
 from loguru import logger
 import json
 
+MAX_PROFILES = 5
+
 def get_profiles(db: Session, user_id: int) -> List[profile_model.Profile]:
     return db.query(profile_model.Profile).filter(profile_model.Profile.user_id == user_id).all()
 
 def create_profile(db: Session, profile: ProfileCreate, user_id: int) -> profile_model.Profile:
     logger.info("Trying to create profile")
+    existing_profiles = db.query(profile_model.Profile).filter(profile_model.Profile.user_id == user_id).count()
+    if existing_profiles >= MAX_PROFILES:
+        raise HTTPException(status_code=400, detail=f"Profile limit reached. You can only have up to {MAX_PROFILES} profiles.")
+
     db_profile = profile_model.Profile(
         origins_list=profile.origins,
         destinations_list=profile.destinations,

@@ -87,9 +87,16 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                         "subsequent_calling_points": serialize_calling_points(service.subsequentCallingPoints.callingPointList)
                     }
 
-                    today = datetime.now(london_tz).date()
-                    departure_time = london_tz.localize(datetime.combine(today, datetime.strptime(train_data['scheduled_departure'], '%H:%M').time()))
+                    now = london_tz.localize(datetime.now())
+                    today = now.date()
+                    scheduled_time = datetime.strptime(train_data['scheduled_departure'], '%H:%M').time()
+                    logger.info("Here 1")
+                    departure_time = london_tz.localize(datetime.combine(today, scheduled_time))
+                    logger.info("Here 2")
 
+                    if departure_time < now:
+                        departure_time += timedelta(days=1)
+                    
                     logger.info(f"Service {train_data['service_id']} scheduled at {departure_time}")
 
                     if latest_departure_time is None or departure_time > latest_departure_time:
@@ -103,9 +110,11 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                             train_service_ids.append(train_data['service_id'])
 
                 if latest_departure_time:
-                    now = datetime.now(london_tz)
+                    now = london_tz.localize(datetime.now())
                     logger.info(f"Time now: {now}")
                     time_offset = int((latest_departure_time - now).total_seconds() / 60)
+                    if time_offset < 0:
+                        time_offset = 0
                     logger.info(f"Time offset = {time_offset}")
 
                 remaining_time_window -= time_offset
