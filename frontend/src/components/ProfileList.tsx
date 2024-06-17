@@ -12,18 +12,7 @@ import ProfileCard from './ProfileCard';
 import { MultiValue, ActionMeta } from 'react-select';
 import { fetchTrains as fetchTrainsApi } from '../utils/api';
 import useProfiles from '../hooks/useProfiles';
-
-interface Profile {
-  id: number;
-  origins: string[];
-  destinations: string[];
-}
-
-interface Train {
-  scheduled_departure: string;
-  estimated_departure: string;
-  destination: string;
-}
+import { Train, Profile } from '../utils/interfaces'
 
 export default function ProfileList() {
   const {
@@ -100,7 +89,7 @@ export default function ProfileList() {
  return (
     <div>
       <Container>
-        <h1>User Profiles</h1>
+        <h1>Train Profiles</h1>
         <ProfileForm
           origins={origins}
           destinations={destinations}
@@ -125,6 +114,7 @@ export default function ProfileList() {
                 onClick={() => handleCardClick(profile)}
                 trains={linkedTrainsData[profile.id]}
                 lastFetchTime={lastFetchTime[profile.id]}
+                loading={loading}
               />
             </Col>
           ))}

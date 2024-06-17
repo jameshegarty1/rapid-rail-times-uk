@@ -1,19 +1,56 @@
 import React from 'react';
-import { TrainList as StyledTrainList, TrainItem } from './ProfileList.styles';
+import { Train } from '../utils/interfaces'
+import { TrainList as StyledTrainList, TrainItem, TrainInfo, TrainInfoItem, Value, Label } from './ProfileCard.styles'
 
-interface Train {
-  scheduled_departure: string;
-  estimated_departure: string;
-  destination: string;
-}
 export default function TrainList({trains}: {trains: Train[]}) {
   return (
     <StyledTrainList>
-      {trains.map((train, index) => (
-        <TrainItem key={index}>
-          {train.scheduled_departure} to {train.destination} - Scheduled: {train.scheduled_departure} - Estimated: {train.estimated_departure}
-        </TrainItem>
-      ))}
+      {trains && trains.length > 0 ? (
+                trains.map((train, index) => (
+                  <TrainItem key={index}>
+                    <div>
+                  <strong>{train.scheduled_departure}</strong> from <strong>{train.origin}</strong> to <strong>{train.destination}</strong>
+                  {train.via && <span> {train.via}</span>}
+                </div>
+                <TrainInfo>
+                  <TrainInfoItem>
+                    <Label>Estimated Departure:</Label>
+                    <Value>{train.estimated_departure}</Value>
+                  </TrainInfoItem>
+                  <TrainInfoItem>
+                    <Label>Platform:</Label>
+                    <Value>{train.platform}</Value>
+                  </TrainInfoItem>
+                  <TrainInfoItem>
+                    <Label>Operator:</Label>
+                    <Value>{train.operator}</Value>
+                  </TrainInfoItem>
+                  <TrainInfoItem>
+                    <Label>Length:</Label>
+                    <Value>{train.length}</Value>
+                  </TrainInfoItem>
+                  <TrainInfoItem>
+                    <Label>Status:</Label>
+                    <Value>{train.is_cancelled ? 'Cancelled' : 'On Time'}</Value>
+                  </TrainInfoItem>
+                  {train.delay_reason && (
+                    <TrainInfoItem>
+                      <Label>Delay Reason:</Label>
+                      <Value>{train.delay_reason}</Value>
+                    </TrainInfoItem>
+                  )}
+                  {train.cancel_reason && (
+                    <TrainInfoItem>
+                      <Label>Cancel Reason:</Label>
+                      <Value>{train.cancel_reason}</Value>
+                    </TrainInfoItem>
+                  )}
+                </TrainInfo>
+            </TrainItem>
+                ))
+              ) : (
+                <p>No trains.</p>
+              )}
     </StyledTrainList>
   );
 };

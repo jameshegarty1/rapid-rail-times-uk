@@ -77,6 +77,7 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                         "scheduled_departure": service.std,
                         "estimated_departure": service.etd,
                         "platform": service.platform,
+                        "origin": origin,
                         "destination": service.destination.location[0].locationName,
                         "via": service.destination.location[0].via,
                         "length": service.length,
@@ -86,18 +87,22 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                         "cancel_reason": service.cancelReason,
                         "subsequent_calling_points": serialize_calling_points(service.subsequentCallingPoints.callingPointList)
                     }
-
-                    now = london_tz.localize(datetime.now())
+                    now_utc = datetime.now()
+                    now = now_utc.astimezone(london_tz)
                     today = now.date()
                     scheduled_time = datetime.strptime(train_data['scheduled_departure'], '%H:%M').time()
-                    logger.info("Here 1")
-                    departure_time = london_tz.localize(datetime.combine(today, scheduled_time))
-                    logger.info("Here 2")
+                    logger.info(f"Scheduled time: {scheduled_time}")
+                    departure_time_naive = datetime.combine(today, scheduled_time)
+                    departure_time = london_tz.localize(departure_time_naive)
+                    logger.info(f"Now: {now}")
+                    logger.info(f"Departure time: {departure_time}")
 
+                    '''
+                    TO-DO : Handle cases of extracting data close to midnight.
                     if departure_time < now:
                         departure_time += timedelta(days=1)
-                    
-                    logger.info(f"Service {train_data['service_id']} scheduled at {departure_time}")
+                    '''
+                    logger.info(f"Service {train_data['service_id']} scheduled at {departure_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
                     if latest_departure_time is None or departure_time > latest_departure_time:
                         latest_departure_time = departure_time
@@ -110,8 +115,11 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                             train_service_ids.append(train_data['service_id'])
 
                 if latest_departure_time:
-                    now = london_tz.localize(datetime.now())
+                    now_utc = datetime.now(pytz.utc)
+                    logger.info(f"Time now UTC: {now_utc}")
+                    now = now_utc.astimezone(london_tz)
                     logger.info(f"Time now: {now}")
+                    logger.info(f"Latest dep. time in last batch: {latest_departure_time}")
                     time_offset = int((latest_departure_time - now).total_seconds() / 60)
                     if time_offset < 0:
                         time_offset = 0
@@ -124,8 +132,13 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                 logger.error(f"Error fetching train routes: {e}")
                 raise HTTPException(status_code=500, detail="Failed to fetch train routes")
 
+    #sort
+    sort_trains(train_info_arr)
+
+    #cache
     redis_client_cache.setex(cache_key, timedelta(minutes=2), json.dumps(train_info_arr))
     logger.info("Data cached")
+
     return train_info_arr
 
 
@@ -145,6 +158,12 @@ def serialize_calling_points(calling_points):
     logger.info("Attempting serialization...")
     serialized = []
     for point in calling_points[0]['callingPoint']:
-        serialized.append({'crs': point['crs'], 'location_name': point['locationName']})
+        serialized.append({'crs': point['crs'], 'location_name': point['locationName'], 'st': point['st'], 'et': point['et'], 'at': point['at']})
     return serialized
+
+
+def sort_trains(trains):
+    # Sort the train_info_arr by scheduled_departure
+    trains.sort(key=lambda x: datetime.strptime(x['scheduled_departure'], '%H:%M'))
+
 

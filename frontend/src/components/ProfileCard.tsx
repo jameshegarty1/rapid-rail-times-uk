@@ -1,37 +1,9 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
 import { formatDistanceToNow } from 'date-fns';
-
-const Card = styled.div`
-  background-color: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.25rem;
-  padding: 1rem;
-  cursor: pointer;
-  transition: transform 0.2s;
-  width: 100%;
-  &:hover {
-    transform: scale(1.02);
-  }
-`;
-
-const CardTitle = styled.h5`
-  margin-bottom: 1rem;
-`;
-
-const TrainList = styled.ul`
-  list-style: none;
-  padding: 0;
-  margin: 0;
-`;
-
-const TrainItem = styled.li`
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 0.25rem;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-`;
+import { Hourglass } from 'react-loader-spinner';
+import { Card, CardTitle, LoadingContainer, Button } from './ProfileCard.styles'
+import  TrainList from './TrainList'
+import { Train } from '../utils/interfaces'
 
 interface ProfileCardProps {
   origins: string[];
@@ -42,13 +14,9 @@ interface ProfileCardProps {
   onRefresh: () => void;
   trains?: Train[];
   lastFetchTime?: Date | null;
+  loading: boolean;
 }
 
-interface Train {
-  scheduled_departure: string;
-  estimated_departure: string;
-  destination: string;
-}
 
 export default function ProfileCard({
   origins, 
@@ -59,6 +27,7 @@ export default function ProfileCard({
   onClick, 
   trains = [],
   lastFetchTime,
+  loading,
 }: ProfileCardProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -72,22 +41,30 @@ export default function ProfileCard({
   return (
     <Card onClick={handleToggleExpand}>
       <CardTitle>{`From: ${origins.join(', ')} To: ${destinations.join(', ')}`}</CardTitle>
-      <button onClick={(e) => { e.stopPropagation(); onEdit(); }}>Edit</button>
-      <button onClick={(e) => { e.stopPropagation(); onDelete(); }}>Delete</button>
-      <button onClick={(e) => { e.stopPropagation(); onRefresh(); }}>Refresh</button>
-      {expanded && trains && (
-        <TrainList>
-          {trains.map((train, index) => (
-            <TrainItem key={index}>
-              {train.scheduled_departure} to {train.destination} - Scheduled: {train.scheduled_departure} - Estimated: {train.estimated_departure}
-            </TrainItem>
-          ))}
-        </TrainList>
-      )}
-      {expanded && lastFetchTime && (
-        <p>{formatDistanceToNow(new Date(lastFetchTime), { addSuffix: true })}</p>
+      <Button onClick={(e) => { e.stopPropagation(); onEdit(); }}>Edit</Button>
+      <Button onClick={(e) => { e.stopPropagation(); onDelete(); }}>Delete</Button>
+      <Button onClick={(e) => { e.stopPropagation(); onRefresh(); }}>Refresh</Button>
+      {expanded && (loading ? (
+        <LoadingContainer>
+          <Hourglass
+            visible={true}
+            height="80"
+            width="80"
+            ariaLabel="hourglass-loading"
+            wrapperStyle={{}}
+            wrapperClass=""
+            colors={['#306cce', '#72a1ed']}
+          />
+        </LoadingContainer>
+      ) : (
+          <>
+            <TrainList trains={trains}/>
+            {lastFetchTime && (
+              <p>{formatDistanceToNow(new Date(lastFetchTime), { addSuffix: true })}</p>
+            )}
+          </>
+        )
       )}
     </Card>
   );
 }
-

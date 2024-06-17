@@ -15,6 +15,7 @@ export const isAuthenticated = () => {
   try {
     const decodedToken = jwtDecode<CustomJwtPayload>(token);
     const currentTime = Date.now() / 1000;
+    console.log("Token:", decodedToken)
 
     if (decodedToken.exp && decodedToken.exp < currentTime) {
       console.log("Token has expired.")
@@ -74,6 +75,7 @@ export const login = async (email: string, password: string) => {
     if ('access_token' in responseData) {
       console.log("Saving token")
       const decodedToken: any = jwtDecode<CustomJwtPayload>(responseData.access_token);
+      console.log("Token:", decodedToken)
       localStorage.setItem('token', responseData.access_token);
       localStorage.setItem('permissions', decodedToken.permissions);
     }

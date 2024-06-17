@@ -1,18 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchProfiles, fetchTrains, createProfile, updateProfile, deleteProfile } from '../utils/api';
 import { fetchTrains as fetchTrainsApi } from '../utils/api';
-
-interface Profile {
-  id: number;
-  origins: string[];
-  destinations: string[];
-}
-
-interface Train {
-  scheduled_departure: string;
-  estimated_departure: string;
-  destination: string;
-}
+import { Train, Profile } from '../utils/interfaces'
 
 interface LinkedTrainData {
   [profileId: number]: Train[];
@@ -136,9 +125,9 @@ export default function useProfiles(): UseProfilesReturn {
         console.log("Got data. Adding to cache.")
         setLinkedTrainsData(prevState => ({ ...prevState, [profileId]: data }));
         setLastFetchTime(prevState => ({ ...prevState, [profileId]: fetchTime }));
+        setLoading(false);
       } catch (error) {
         setError('Error fetching trains');
-      } finally {
         setLoading(false);
       }
     }

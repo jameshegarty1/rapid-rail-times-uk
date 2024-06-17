@@ -1,17 +1,6 @@
 // api.ts
 import axiosInstance from './axiosInstance';
-
-interface Profile {
-  id: number;
-  origins: string[];
-  destinations: string[];
-}
-
-interface Train {
-  scheduled_departure: string;
-  estimated_departure: string;
-  destination: string;
-}
+import { Train, Profile } from './interfaces'
 
 export const fetchTrains = async (origins: string[], destinations: string[], forceFetch = false): Promise<Train[]> => {
   const response = await axiosInstance.get('/api/v1/train/train_routes/', {
