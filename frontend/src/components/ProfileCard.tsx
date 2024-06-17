@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Hourglass } from 'react-loader-spinner';
-import { Card, CardTitle, LoadingContainer, Button } from './ProfileCard.styles'
+import { Watch } from 'react-loader-spinner';
+import { Card, CardTitle, LoadingContainer, Button, Timestamp } from './ProfileCard.styles'
 import  TrainList from './TrainList'
 import { Train } from '../utils/interfaces'
 
@@ -46,22 +46,21 @@ export default function ProfileCard({
       <Button onClick={(e) => { e.stopPropagation(); onRefresh(); }}>Refresh</Button>
       {expanded && (loading ? (
         <LoadingContainer>
-          <Hourglass
+          <Watch
             visible={true}
-            height="80"
-            width="80"
-            ariaLabel="hourglass-loading"
+            height="40"
+            width="40"
+            ariaLabel="watch-loading"
             wrapperStyle={{}}
             wrapperClass=""
-            colors={['#306cce', '#72a1ed']}
-          />
+            color="#4fa94d"          />
         </LoadingContainer>
       ) : (
           <>
             <TrainList trains={trains}/>
             {lastFetchTime && (
-              <p>{formatDistanceToNow(new Date(lastFetchTime), { addSuffix: true })}</p>
-            )}
+            <Timestamp>{formatDistanceToNow(new Date(lastFetchTime), { addSuffix: true })}</Timestamp>
+          )}
           </>
         )
       )}

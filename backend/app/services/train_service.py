@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import pytz
 import redis
 import json
+from app.exceptions import TrainServiceException
 
 LDB_TOKEN='55435278-c2e4-4799-8636-ffbe1136dcae'
 WSDL='http://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2021-11-01'
@@ -64,8 +65,8 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
             try:
                 response = client.service.GetDepBoardWithDetails(numRows=10,crs=origin,timeOffset=time_offset)
                 if response.trainServices is None:
-                    raise HTTPException(status_code=404, detail="No train services found")
-            
+                    raise TrainServiceException(status_code=404, detail="No train services found")
+
                 services = response.trainServices.service
                 logger.info(f"Trains from {response.locationName}")
  
@@ -87,28 +88,44 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                         "cancel_reason": service.cancelReason,
                         "subsequent_calling_points": serialize_calling_points(service.subsequentCallingPoints.callingPointList)
                     }
-                    now_utc = datetime.now()
+
+                    now_utc = datetime.now(pytz.utc)
                     now = now_utc.astimezone(london_tz)
                     today = now.date()
-                    scheduled_time = datetime.strptime(train_data['scheduled_departure'], '%H:%M').time()
-                    logger.info(f"Scheduled time: {scheduled_time}")
-                    departure_time_naive = datetime.combine(today, scheduled_time)
-                    departure_time = london_tz.localize(departure_time_naive)
+                    scheduled_time = datetime.combine(today, datetime.strptime(train_data['scheduled_departure'], '%H:%M').time())
+                    scheduled_time = scheduled_time.astimezone(london_tz)
+                    estimated_time = None
+
+                    if train_data['estimated_departure'] != 'On time':
+                        try:
+                            estimated_time = datetime.combine(today, datetime.strptime(train_data['estimated_departure'], '%H:%M').time())
+                            estimated_time = estimated_time.astimezone(london_tz)
+                        except ValueError:
+                            estimated_time = scheduled_time
+                    else:
+                        estimated_time = scheduled_time
+
+                    if estimated_time and estimated_time < scheduled_time:
+                        estimated_time += timedelta(days=1)
+
+                    if estimated_time < now:
+                        estimated_time += timedelta(days=1)
+
+                    logger.info(f"Final Estimated Departure time: {estimated_time}")
+                    
+                    if scheduled_time < now:
+                        scheduled_time += timedelta(days=1)
+
                     logger.info(f"Now: {now}")
-                    logger.info(f"Departure time: {departure_time}")
+                    logger.info(f"Scheduled Departure time: {scheduled_time}")
+                    logger.info(f"Estimated Departure time: {estimated_time}")
+                    logger.info(f"Service {train_data['service_id']} actual departure at {estimated_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-                    '''
-                    TO-DO : Handle cases of extracting data close to midnight.
-                    if departure_time < now:
-                        departure_time += timedelta(days=1)
-                    '''
-                    logger.info(f"Service {train_data['service_id']} scheduled at {departure_time.strftime('%Y-%m-%d %H:%M:%S')}")
-
-                    if latest_departure_time is None or departure_time > latest_departure_time:
-                        latest_departure_time = departure_time
+                    if latest_departure_time is None or estimated_time > latest_departure_time:
+                        latest_departure_time = estimated_time
                         logger.info(f"New latest departure time: {latest_departure_time}")
  
-                    if filter_trains_by_destinations(train_data,destinations):
+                    if filter_trains_by_destinations(train_data, destinations):
                         logger.info(f"Train with ID {train_data['service_id']} calls at one of our destinations!")
                         if train_data['service_id'] not in train_service_ids:
                             train_info_arr.append(train_data)
@@ -130,7 +147,7 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
  
             except Exception as e:
                 logger.error(f"Error fetching train routes: {e}")
-                raise HTTPException(status_code=500, detail="Failed to fetch train routes")
+                raise TrainServiceException(status_code=500, detail="Failed to fetch train routes")
 
     #sort
     sort_trains(train_info_arr)

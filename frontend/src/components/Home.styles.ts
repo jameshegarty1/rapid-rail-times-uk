@@ -4,6 +4,8 @@ export const Container = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+  backgroundColor: '#f5f5f5', // Light grey background
+  minHeight: '100vh', // Ensure it covers the full viewport height
 `;
 
 export const AuthContainer = styled.div`

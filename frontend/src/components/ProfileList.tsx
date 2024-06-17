@@ -10,9 +10,8 @@ import {
 import ProfileForm from './ProfileForm';
 import ProfileCard from './ProfileCard';
 import { MultiValue, ActionMeta } from 'react-select';
-import { fetchTrains as fetchTrainsApi } from '../utils/api';
 import useProfiles from '../hooks/useProfiles';
-import { Train, Profile } from '../utils/interfaces'
+import { Profile } from '../utils/interfaces'
 
 export default function ProfileList() {
   const {
