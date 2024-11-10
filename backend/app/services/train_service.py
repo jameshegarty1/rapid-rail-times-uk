@@ -1,20 +1,20 @@
-from app.core.celery_app import celery_app
 from loguru import logger
 from typing import List
 from zeep import Client, Settings, xsd
 from zeep.plugins import HistoryPlugin
-from fastapi import HTTPException
-from collections import OrderedDict
 from datetime import datetime, timedelta
 import pytz
-import redis
 import json
+import os
 from app.exceptions import TrainServiceException
+from app.services.cache_service import CacheService
 
-LDB_TOKEN='55435278-c2e4-4799-8636-ffbe1136dcae'
-WSDL='http://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2021-11-01'
+LDB_TOKEN = os.getenv('LDB_TOKEN')
+WSDL = os.getenv('WSDL')
 
-redis_client_cache = redis.Redis(host='redis', port=6379, db=1)
+
+cache_service = CacheService()
+
 
 def create_soap_client(wsdl: str, token: str) -> Client:
     settings = Settings(strict=False)
@@ -36,16 +36,13 @@ def create_soap_client(wsdl: str, token: str) -> Client:
 
 def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bool) -> List[dict]:
     logger.info(f"Fetching train routes for {origins} to {destinations} with forceFetch={forceFetch}")
-    
-    # Implement caching logic here
-    # If forceFetch is True, skip the cache and fetch fresh data
-
     cache_key = f"train_routes:{'-'.join(origins)}:{'-'.join(destinations)}"
 
     if not forceFetch:
-        cached_data = redis_client_cache.get(cache_key)
+        cached_data = cache_service.get(cache_key)
         if cached_data:
-            logger.info("Returning cached data")
+            logger.info("Returning cached data:")
+
             return cached_data
 
     client = create_soap_client(WSDL, LDB_TOKEN)
@@ -54,7 +51,6 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
     logger.info("in get_train_routes")
 
     total_time_window = 60
-    
     train_info_arr = []
     train_service_ids = []
 
@@ -69,7 +65,7 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
 
                 services = response.trainServices.service
                 logger.info(f"Trains from {response.locationName}")
- 
+
                 latest_departure_time = None
 
                 for service in services:
@@ -92,14 +88,15 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                     now_utc = datetime.now(pytz.utc)
                     now = now_utc.astimezone(london_tz)
                     today = now.date()
-                    scheduled_time = datetime.combine(today, datetime.strptime(train_data['scheduled_departure'], '%H:%M').time())
-                    scheduled_time = scheduled_time.astimezone(london_tz)
+                    scheduled_time_naive = datetime.combine(today, datetime.strptime(train_data['scheduled_departure'], '%H:%M').time())
+                    scheduled_time = london_tz.localize(scheduled_time_naive)
                     estimated_time = None
 
                     if train_data['estimated_departure'] != 'On time':
                         try:
                             estimated_time = datetime.combine(today, datetime.strptime(train_data['estimated_departure'], '%H:%M').time())
                             estimated_time = estimated_time.astimezone(london_tz)
+                            logger.info(f"Set estimated time to {estimated_time}")
                         except ValueError:
                             estimated_time = scheduled_time
                     else:
@@ -108,21 +105,16 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                     if estimated_time and estimated_time < scheduled_time:
                         estimated_time += timedelta(days=1)
 
-                    if estimated_time < now:
-                        estimated_time += timedelta(days=1)
-
-                    logger.info(f"Final Estimated Departure time: {estimated_time}")
-                    
-                    if scheduled_time < now:
-                        scheduled_time += timedelta(days=1)
+                    #if scheduled_time < now:
+                        #scheduled_time += timedelta(days=1)
 
                     logger.info(f"Now: {now}")
                     logger.info(f"Scheduled Departure time: {scheduled_time}")
                     logger.info(f"Estimated Departure time: {estimated_time}")
                     logger.info(f"Service {train_data['service_id']} actual departure at {estimated_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-                    if latest_departure_time is None or estimated_time > latest_departure_time:
-                        latest_departure_time = estimated_time
+                    if latest_departure_time is None or scheduled_time > latest_departure_time:
+                        latest_departure_time = scheduled_time
                         logger.info(f"New latest departure time: {latest_departure_time}")
  
                     if filter_trains_by_destinations(train_data, destinations):
@@ -149,11 +141,11 @@ def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bo
                 logger.error(f"Error fetching train routes: {e}")
                 raise TrainServiceException(status_code=500, detail="Failed to fetch train routes")
 
-    #sort
+    # sort
     sort_trains(train_info_arr)
 
-    #cache
-    redis_client_cache.setex(cache_key, timedelta(minutes=2), json.dumps(train_info_arr))
+    # cache
+    cache_service.setex(cache_key, timedelta(minutes=2), json.dumps(train_info_arr))
     logger.info("Data cached")
 
     return train_info_arr

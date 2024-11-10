@@ -1,0 +1,216 @@
+# Google provider setup
+
+provider "google" {
+  credentials = file(".pk/rail-times-uk-4fc7356a921b.json")  # Replace with the path to your GCP credentials file
+  project     = var.project_id
+  region      = var.region
+}
+
+
+
+# Enable necessary APIs
+resource "google_project_service" "cloud_run" {
+  service = "run.googleapis.com"
+}
+
+resource "google_project_service" "cloud_build" {
+  service = "cloudbuild.googleapis.com"
+}
+
+resource "google_project_service" "sql_admin" {
+  service = "sqladmin.googleapis.com"
+}
+
+# Enable the Redis API
+resource "google_project_service" "redis" {
+  service = "redis.googleapis.com"
+}
+
+#Google cloud DB
+resource "google_sql_database_instance" "db_instance" {
+  name             = "rail-times-instance"
+  database_version = "POSTGRES_13"  # You can change this to your preferred version
+  region           = "europe-west1"     # Set to your preferred region
+  
+  settings {
+    tier = "db-f1-micro"            # Set your desired machine type
+
+    ip_configuration {
+      ipv4_enabled = true           # Enable public IP
+      # authorized_networks = [{
+      #   value = "your-public-ip-address"
+      # }]
+    }
+
+    backup_configuration {
+      enabled = true                # Enable automated backups
+    }
+  }
+}
+
+# Define the PostgreSQL database in the instance
+resource "google_sql_database" "db" {
+  name     = "rail_times_db"
+  instance = google_sql_database_instance.db_instance.name
+}
+
+# Set the PostgreSQL user password (replace with secure values)
+resource "google_sql_user" "db_user" {
+  name     = "postgres"
+  instance = google_sql_database_instance.db_instance.name
+  password = "12345"
+}
+
+resource "google_redis_instance" "redis_instance" {
+  name           = "rail-times-redis"
+  tier           = "BASIC"  # You can also use "STANDARD_HA" for high availability
+  memory_size_gb = 1  # Minimum size is 1GB
+
+  region         = var.region
+  display_name   = "Redis for Rail Times app"
+
+}
+
+# Backend API Cloud Run service
+resource "google_cloud_run_service" "backend" {
+  name     = var.backend_service_name
+  location = var.region
+
+  template {
+    spec {
+      containers {
+        image = var.backend_image_url # Docker image URL for your backend
+
+        # Optional: Additional backend env variables can go here
+        resources {
+          limits = {
+            memory = "512Mi"
+            cpu    = "1"
+          }
+        }
+        env {
+            name  = "DATABASE_URL"
+            value = "postgresql://${google_sql_user.db_user.name}:${google_sql_user.db_user.password}@/${google_sql_database.db.name}?host=/cloudsql/${google_sql_database_instance.db_instance.connection_name}"
+        }
+        env {
+          name  = "REDIS_URL"
+          value = "redis://${google_redis_instance.redis_instance.host}:6379/0"  # Redis host IP address
+        }
+
+        # Use the default Cloud Run URL for the frontend
+        env {
+          name  = "FRONTEND_URL"
+          value = var.frontend_url 
+        }
+
+      }
+      
+      service_account_name = "deployment-automation-sa@rail-times-uk.iam.gserviceaccount.com"
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+}
+
+# Allow public (unauthenticated) access to the backend service
+resource "google_cloud_run_service_iam_member" "backend_noauth" {
+  location    = google_cloud_run_service.backend.location
+  project     = var.project_id
+  service     = google_cloud_run_service.backend.name
+  role        = "roles/run.invoker"
+  member      = "allUsers"
+}
+
+# Frontend Cloud Run service, depends on backend service for API URL
+resource "google_cloud_run_service" "frontend" {
+  name     = var.frontend_service_name
+  location = var.region
+
+  # Frontend container, with the backend API URL passed as an environment variable
+  template {
+    spec {
+      containers {
+        image = var.frontend_image_url  # Docker image URL for your frontend
+
+        env {
+          name  = "REACT_APP_API_URL"
+          value = var.backend_url 
+        }
+        resources {
+          limits = {
+            memory = "512Mi"
+            cpu    = "1"
+          }
+        }
+      }
+
+      
+
+      service_account_name = "deployment-automation-sa@rail-times-uk.iam.gserviceaccount.com"
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+}
+
+# Allow public (unauthenticated) access to the frontend service
+resource "google_cloud_run_service_iam_member" "frontend_noauth" {
+  location    = google_cloud_run_service.frontend.location
+  project     = var.project_id
+  service     = google_cloud_run_service.frontend.name
+  role        = "roles/run.invoker"
+  member      = "allUsers"
+}
+
+# Output the connection name and IP address
+output "postgresql_instance_connection_name" {
+  value = google_sql_database_instance.db_instance.connection_name
+}
+
+output "postgresql_instance_public_ip" {
+  value = google_sql_database_instance.db_instance.public_ip_address
+}
+
+# Output the Redis host IP address
+output "redis_host" {
+  value = google_redis_instance.redis_instance.host
+}
+
+# Variables
+variable "project_id" {
+  description = "The Google Cloud project ID"
+}
+
+variable "region" {
+  description = "The region to deploy the Cloud Run services"
+}
+
+variable "backend_service_name" {
+  description = "The name of the backend Cloud Run service"
+}
+
+variable "frontend_service_name" {
+  description = "The name of the frontend Cloud Run service"
+}
+
+variable "backend_image_url" {
+  description = "The Docker image URL of the backend API"
+}
+
+variable "frontend_image_url" {
+  description = "The Docker image URL of the frontend React app"
+}
+
+variable "frontend_url" {
+  description = "Gcloud URL of frontend service"
+}
+
+variable "backend_url" {
+  description = "Gcloud URL of backend service"
+}

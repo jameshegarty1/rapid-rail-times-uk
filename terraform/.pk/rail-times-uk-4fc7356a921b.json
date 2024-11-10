@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "rail-times-uk",
+  "private_key_id": "4fc7356a921b5f33c4c8c24518b8e70fc27b937f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5RcoEEdWsVAzq\nyIwDamnuEcaIZpKmwRdJYvqUm7atCGaejjc1kR8hMn1sYJQS7Sm4zOUeaLkLAegR\nbPDOX8SC3l2zyBD++gzjg53KBWzEBnK9TIACmz6OKGM/f9nOJ5SnWyhIJTI4nsBA\n+7DVF0wZddRPX7OfiG0Pl5NEcydTgLf110aLhzE06dH2J1LS8tKGYnUlzEaC6bEj\n28npKeBS2G2Ergxr8jAAOryO859E1TFai5xGy+vUeSW6wf1gUu6PRpeA/syrfJgQ\nauvg+wmwfO8kgee4WjwmQMp9IOOjsJ028m1MR3h7L4o3s1RNqkCHQU4GDYV6a4OU\nHxvkL03XAgMBAAECggEAQ+t/Qx2sqPfJInsxxQDKY7HVh+Seh45K9KbZ+QfaoLVv\nNVoqiDMy588kJsqDDisue+Z1aj/28j+ZLWY0I1v9ZQKS9Fj4ThkqB3AVNN3nQTeh\n8Z6tYQc7mA7bT4iVtttQxkeHTWeBcTtVfJ0odv4K8lx9YDnT1jzDyo8FOHdEp/nt\nA8f8ZnoPuS554+v9XVuzw1zvNJVec7yIIJoaS8jjyIkPuXw0/OHInBr6DEaFF4Zt\nPnnglQjprG/RPQKAVgnqGaTvF1VXFyAF1JvGQPAbKjBWITf5dtQ/5UBPgzMMcHxG\n+a5oXogosT67xHpV5KOhqdbD7ngNaDJqEFyJFiRkHQKBgQDdO4LnCY/79YSHPxwx\n3lU3RP0+KZ9pJsJbIkOQpHhA9u752pzA8ewC8RkXf1umGLSDjYiU267W0nGO63tT\n5nM134DOmGkONs2u4n/d52gvF3ImuVCmLii8dV1lcHDD+iG5zWCzymqfjLgTuHRs\n3Kf87ULDyANGWqcx6D9SRFerCwKBgQDWY5AnKEOYEsjx+RpBmum0pX1VGin3T1ia\nNwoVHa7BZ1YLAcyQFIS2sgTN7/06J0zy8cQim0EnTKeKOkDNn7gSSA2YD8Pvij49\n4JdaXbrlRXYp//H7jWHh3+h5ecrxE6lqTICxCBZ4F2fAXkmip/gGwSdIfbS08AWt\nF1/40gIH5QKBgBkhypQedPnlgUGv/K75l+qobrBiIBbc7VVXBh/nXzXaF3nQyN/u\nW6ZV50jREgNDaTZMnMh0UF9dFsNqot78HfhvxH0zuTOBLEqCto3p3N8EpdYaVTwb\noEsQdiSw6k6JGs21tBeYlhY78SlkWe2H/5lvBpehICYc5EN6I79fvinTAoGBAK3R\nlVuaEouml1NQQxBz2A3FqwMnrmS76TtHap5KLZjS/nj4IXGjoSI63RhW/nl6ybGj\ngQEJ3V5OkPvKVSYh2+y+jH8AMTzyWZpzkGMM4W3nznEo+XmZXIX0sxhiPb8N0OrF\nUgW2Z/lACLd3+r2s77QSQJZOjQeyHvgCnqYvJsRdAoGAexcp8Fwr0oW2qwj/SeVU\nGCfVfVGLD7Pk9eRXKg6bq6v2XtAq84E7ziVGZ2EmxHDLOLkjbF7XpNDY+dpYmkVR\nAwhyoMY9xJSeh8jv+4N6/35N0pPNQT0mJ9uw/yyT/abgiWKaH92Tv6aC1VeMJgdC\nJftUO0e6odZerg4b+WMovpg=\n-----END PRIVATE KEY-----\n",
+  "client_email": "deployment-automation-sa@rail-times-uk.iam.gserviceaccount.com",
+  "client_id": "110339297863748724148",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/deployment-automation-sa%40rail-times-uk.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

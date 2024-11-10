@@ -1,8 +1,8 @@
 import React from 'react';
-import { isAuthenticated } from '../utils/auth';
-import ProfileList from './ProfileList';
-import Navbar from './Navbar';
-import { Container, AuthContainer, Button, Message } from './Home.styles';
+import { isAuthenticated } from 'utils/auth';
+import ProfileList from 'components/ProfileList';
+import Navbar from 'components/Navbar';
+import { Container, AuthContainer, Button, Message } from 'components/styles/Home.styles';
 
 export default function Home() {
   console.log('Home component rendered');
@@ -21,4 +21,4 @@ export default function Home() {
       )}
     </Container>
   );
-};
+}

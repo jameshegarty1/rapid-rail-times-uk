@@ -1,17 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Container,
   Row,
   Col,
   Error,
-  TrainList,
-  TrainItem
-} from './ProfileList.styles';
-import ProfileForm from './ProfileForm';
-import ProfileCard from './ProfileCard';
+} from 'components/styles/ProfileList.styles';
+import ProfileForm from 'components/ProfileForm';
+import ProfileCard from 'components/ProfileCard';
 import { MultiValue, ActionMeta } from 'react-select';
-import useProfiles from '../hooks/useProfiles';
-import { Profile } from '../utils/interfaces'
+import useProfiles from 'hooks/useProfiles';
+import { Profile } from 'utils/interfaces'
 
 export default function ProfileList() {
   const {
@@ -29,11 +27,7 @@ export default function ProfileList() {
     handleUpdateProfile,
     handleDeleteProfile,
     handleFetchTrains,
-    setLinkedTrainsData,
-    setLoading,
-    setError,
     lastFetchTime,
-    setLastFetchTime
   } = useProfiles();
 
 
@@ -92,7 +86,7 @@ export default function ProfileList() {
         <ProfileForm
           origins={origins}
           destinations={destinations}
-          loading={loading}
+          loading={Object.values(loading).some(isLoading => isLoading)}
           onChange={handleSelectChange}
           onSubmit={handleSubmit}
           editingProfile={editingProfile !== null}
@@ -113,7 +107,7 @@ export default function ProfileList() {
                 onClick={() => handleCardClick(profile)}
                 trains={linkedTrainsData[profile.id]}
                 lastFetchTime={lastFetchTime[profile.id]}
-                loading={loading}
+                loading={loading[profile.id] || false}
               />
             </Col>
           ))}

@@ -1,12 +1,12 @@
 import React, { FC, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Admin } from './admin';
+import { Route, Routes } from 'react-router-dom';
+import { Admin } from 'admin';
 import { useNavigate } from 'react-router';
-import Home from './components/Home';
-import Login from './components/Login';
-import SignUp from './components/SignUp';
-import ProfileList from './components/ProfileList';
-import { logout } from './utils/auth';
+import Home from 'components/Home';
+import Login from 'components/Login';
+import SignUp from 'components/SignUp';
+import ProfileList from 'components/ProfileList';
+import { logout } from 'utils/auth';
 
 export default function AppRoutes() {
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function AppRoutes() {
         <Route path="/logout" element={<LogoutHandler />} />
       </Routes>
   );
-};
+}
 
 const LogoutHandler: FC = () => {
   const navigate = useNavigate();

@@ -10,21 +10,31 @@ export const Container = styled.div`
 
 export const Row = styled.div`
   display: flex;
-  flex-direction: column; // Column layout for mobile
+  flex-wrap: wrap; // Allow items to wrap to the next line
   gap: 1rem; // Add some space between profile cards
 
-  @media(min-width: 768px) {
-    flex-direction: row; // Row layout for larger screens
+  @media (min-width: 768px) {
+    gap: 2rem; // Increase gap for larger screens
   }
 `;
+
 
 export const Col = styled.div`
-  width: 100%; // Make each column full width
+  width: 100%; // Make each column full width on small screens
 
-  @media(min-width: 768px) {
-    flex: 1;
+  @media (min-width: 768px) {
+    flex: 0 0 48%; // Take up roughly half the row on larger screens
   }
+
+  @media (min-width: 1024px) {
+    flex: 0 0 31%; // Take up roughly a third of the row on larger screens
+  }
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 `;
+
 
 export const Error = styled.p`
   color: red;

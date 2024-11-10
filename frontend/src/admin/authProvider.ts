@@ -5,6 +5,11 @@ type loginFormType = {
   password: string;
 };
 
+interface JwtPayload{
+  sub: string;
+  permissions: string;
+}
+
 const authProvider = {
   login: ({ username, password }: loginFormType) => {
     const formData = new FormData();
@@ -22,7 +27,7 @@ const authProvider = {
         return response.json();
       })
       .then(({ access_token }) => {
-        const decodedToken: any = jwtDecode(access_token);
+        const decodedToken = jwtDecode<JwtPayload>(access_token);
         if (decodedToken.permissions !== 'admin') {
           throw new Error('Forbidden');
         }

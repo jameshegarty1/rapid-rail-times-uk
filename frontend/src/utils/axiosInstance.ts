@@ -1,8 +1,10 @@
-// axiosInstance.js
+// axiosInstance.ts
 import axios from 'axios';
 
-// Create an Axios instance
-const axiosInstance = axios.create();
+// Set the base URL for the API
+const axiosInstance = axios.create({
+  baseURL: process.env.REACT_APP_API_URL,
+});
 
 // Add a request interceptor to include the token in all requests
 axiosInstance.interceptors.request.use(
@@ -12,6 +14,9 @@ axiosInstance.interceptors.request.use(
       config.headers = config.headers || {}; // Ensure headers is an object
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+
+    const fullUrl = `${config.baseURL}${config.url}`;
+    console.log(`Sending request to: ${fullUrl}`);
     return config;
   },
   (error) => {

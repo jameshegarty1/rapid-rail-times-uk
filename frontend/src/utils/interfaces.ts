@@ -28,3 +28,12 @@ export interface CallingPoint {
   et: string; // estimated time
   at: string; // actual time
 }
+
+
+export interface TaskResponse {
+  status: 'pending' | 'completed' | 'failed';
+  task_id: string;
+  check_status_url?: string;
+  result?: Train[];
+  error?: string;
+}

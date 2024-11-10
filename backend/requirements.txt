@@ -1,8 +1,6 @@
 alembic==1.4.3
 Authlib==0.14.3
 fastapi==0.101.1 
-celery==5.0.0
-redis==3.5.3
 httpx==0.15.5
 ipython==7.31.1
 itsdangerous==1.1.0
@@ -20,3 +18,4 @@ python-multipart==0.0.5
 pyjwt==2.6.0
 zeep==4.2.1
 fastapi-middleware-logger==0.0.5
+cachetools

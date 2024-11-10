@@ -1,16 +1,35 @@
-FROM node:12
-
-ADD package.json /package.json
-
-ENV NODE_PATH=/node_modules
-ENV PATH=$PATH:/node_modules/.bin
-RUN npm install
+# Stage 1: Build the React app
+FROM node:16 AS build
 
 WORKDIR /app
-ADD . /app
 
-EXPOSE 8000
-EXPOSE 35729
+# Copy the package.json and package-lock.json files
+COPY package.json package-lock.json ./
 
-ENTRYPOINT ["/bin/bash", "/app/run.sh"]
-CMD ["start"]
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Define build arguments
+ARG REACT_APP_API_URL
+
+# Set environment variables from build arguments
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
+# Build the React app for production
+RUN npm run build
+
+# Stage 2: Serve the React app using Nginx
+FROM nginx:alpine
+
+COPY --from=build /app/build /usr/share/nginx/html
+
+COPY nginx/default.conf.prod /etc/nginx/conf.d/default.conf
+
+
+# Expose the dynamic port
+EXPOSE 8080
+
+CMD ["sh", "-c", "nginx -g 'daemon off;'"]
