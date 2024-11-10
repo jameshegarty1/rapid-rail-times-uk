@@ -1,4 +1,5 @@
 import { jwtDecode, JwtPayload } from 'jwt-decode';
+import axiosInstance from './axiosInstance';
 import axios from 'axios';
 import qs from 'qs';
 
@@ -7,11 +8,34 @@ interface CustomJwtPayload extends JwtPayload {
 }
 
 export const isAuthenticated = () => {
-  const permissions = localStorage.getItem('permissions');
-  if (!permissions) {
+  const token = localStorage.getItem('token');
+  if (!token) {
     return false;
   }
-  return !!(permissions === 'user' || permissions === 'admin');
+
+  try {
+    const decodedToken = jwtDecode<CustomJwtPayload>(token);
+    const currentTime = Date.now() / 1000;
+    console.log("Token:", decodedToken)
+
+    if (decodedToken.exp && decodedToken.exp < currentTime) {
+      console.log("Token has expired.")
+      localStorage.removeItem('token');
+      localStorage.removeItem('permissions');
+      return false;
+    }
+
+    console.log("Login token is still valid.")
+
+    const permissions = localStorage.getItem('permissions');
+    return !!(permissions === 'user' || permissions === 'admin');
+  } catch (error) {
+    console.log("Error occurred. Setting as unauthenticated...")
+    // Token is invalid
+    localStorage.removeItem('token');
+    localStorage.removeItem('permissions');
+    return false;
+  }
 };
 
 /**
@@ -32,7 +56,7 @@ export const login = async (email: string, password: string) => {
   console.log("Before making API request...");
   try {
     const data = { username: email, password: password };
-    const response = await axios.post('/api/v1/auth/token', qs.stringify(data), {
+    const response = await axiosInstance.post('/api/v1/auth/token', qs.stringify(data), {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -51,15 +75,20 @@ export const login = async (email: string, password: string) => {
 
     if ('access_token' in responseData) {
       console.log("Saving token")
-      const decodedToken: any = jwtDecode<CustomJwtPayload>(responseData.access_token);
+      const decodedToken = jwtDecode<CustomJwtPayload>(responseData.access_token);
+      console.log("Token:", decodedToken)
       localStorage.setItem('token', responseData.access_token);
       localStorage.setItem('permissions', decodedToken.permissions);
     }
 
     return data;
-  } catch (error: any) {
-    if (error.response && error.response.data && error.response.data.detail) {
-      throw new Error(error.response.data.detail);
+  } catch (error: unknown) { // Use `unknown` instead of `any`
+    if (axios.isAxiosError(error)) {
+      if (error.response && error.response.data && error.response.data.detail) {
+        throw new Error(error.response.data.detail);
+      }
+    } else if (error instanceof Error) {
+      throw new Error(error.message);
     } else {
       throw new Error('Internal server error');
     }
@@ -92,7 +121,7 @@ export const signUp = async (
 
   try {
     const data = { username: email, password: password };
-    const response = await axios.post('/api/v1/auth/signup', qs.stringify(data), {
+    const response = await axiosInstance.post('/api/v1/auth/signup', qs.stringify(data), {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -114,14 +143,18 @@ export const signUp = async (
     }
 
     return responseData;
-  } catch (error: any) {
-    if (error.response && error.response.data && error.response.data.detail) {
-      throw new Error(error.response.data.detail);
+  } catch (error: unknown) { // Use `unknown` instead of `any`
+    if (axios.isAxiosError(error)) {
+      if (error.response && error.response.data && error.response.data.detail) {
+        throw new Error(error.response.data.detail);
+      }
+    } else if (error instanceof Error) {
+      throw new Error(error.message);
     } else {
       throw new Error('Internal server error');
     }
   }
-};
+}
 
 export const logout = () => {
   localStorage.removeItem('token');

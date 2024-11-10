@@ -1,6 +1,6 @@
 import os
 
-PROJECT_NAME = "my-train-app"
+PROJECT_NAME = "rail-times-uk"
 
 SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
 

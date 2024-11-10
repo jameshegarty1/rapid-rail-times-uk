@@ -1,37 +1,25 @@
-/** @jsxImportSource @emotion/react */
-import { css } from '@emotion/react';
-import React, { FC, useState } from 'react';
-import { Paper, Grid, TextField, Button, Alert } from '@mui/material';
+import styled from '@emotion/styled';
+import React, { useState } from 'react';
+import { Grid, TextField, Button, Alert } from '@mui/material';
+import Paper from '@mui/material/Paper';
 import { Face, Fingerprint } from '@mui/icons-material';
 import { Navigate } from 'react-router-dom';
 import { useNavigate } from 'react-router';
 
 import { signUp, isAuthenticated } from '../utils/auth';
 
-const useStyles = {
-  margin: css`
-    margin: 16px;
-  `,
-  padding: css`
-    padding: 8px;
-  `,
-  button: css`
-    text-transform: none;
-  `,
-  marginTop: css`
-    margin-top: 10px;
-  `,
-};
+const StyledDiv = styled.div`
+  margin: 16px;
+`;
 
 export default function SignUp() {
-  const classes = useStyles;
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [passwordConfirmation, setPasswordConfirmation] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  const handleSubmit = async (_: React.MouseEvent) => {
+  const handleSubmit = async () => {
     // Password confirmation validation
     if (password !== passwordConfirmation) setError('Passwords do not match');
     else {
@@ -57,9 +45,9 @@ export default function SignUp() {
   return isAuthenticated() ? (
     <Navigate to="/" />
   ) : (
-    <Paper css={classes.padding}>
-      <div css={classes.margin}>
-        <Grid container spacing={8} alignItems="flex-end">
+    <Paper sx={{ padding: '16px' }}>
+      <StyledDiv>
+        <Grid container spacing={2} alignItems="flex-end">
           <Grid item>
             <Face />
           </Grid>
@@ -78,7 +66,7 @@ export default function SignUp() {
             />
           </Grid>
         </Grid>
-        <Grid container spacing={8} alignItems="flex-end">
+        <Grid container spacing={2} alignItems="flex-end">
           <Grid item>
             <Fingerprint />
           </Grid>
@@ -96,7 +84,7 @@ export default function SignUp() {
             />
           </Grid>
         </Grid>
-        <Grid container spacing={8} alignItems="flex-end">
+        <Grid container spacing={2} alignItems="flex-end">
           <Grid item>
             <Fingerprint />
           </Grid>
@@ -122,17 +110,17 @@ export default function SignUp() {
             </Grid>
           )}
         </Grid>
-        <Grid container justifyContent="center" css={classes.marginTop}>
+        <Grid container justifyContent="center" sx={{ marginTop: '10px' }}>
           <Button
             variant="outlined"
             color="primary"
-            css={classes.button}
+            sx={{ textTransform: 'none' }}
             onClick={handleSubmit}
           >
             Sign Up
           </Button>
         </Grid>
-      </div>
+      </StyledDiv>
     </Paper>
   );
-};
+}

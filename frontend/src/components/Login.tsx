@@ -1,20 +1,20 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
-import React, { FC, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Paper,
   Grid,
   TextField,
   Button,
   FormControlLabel,
   Checkbox,
 } from '@mui/material';
+import Paper from '@mui/material/Paper';
 import { Face, Fingerprint } from '@mui/icons-material';
 import { Alert } from '@mui/material';
 import { Navigate } from 'react-router-dom';
 import { useNavigate } from 'react-router';
 
-import { login, isAuthenticated } from '../utils/auth';
+import { login, isAuthenticated } from 'utils/auth';
 
 const useStyles = {
   margin: css`
@@ -38,13 +38,13 @@ export default function Login() {
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  const handleSubmit = async (_: React.MouseEvent) => {
+  const handleSubmit = async () => {
     setError('');
     try {
       const data = await login(email, password);
 
       if (data) {
-        console.log("Login success! Going to Profiles List...")
+        console.log("Login success! Going to Profiles List.")
         navigate('/');
       }
     } catch (err) {
@@ -150,5 +150,5 @@ export default function Login() {
       </div>
     </Paper>
   );
-};
+}
 

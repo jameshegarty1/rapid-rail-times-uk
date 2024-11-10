@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import Select, { MultiValue, ActionMeta, InputActionMeta } from 'react-select';
 import Fuse from 'fuse.js';
-import { Form, Input, Button } from './ProfileList.styles';
+import { Form, Button } from 'components/styles/ProfileList.styles';
+
+import stationData from 'config/stations.json'
 
 export default function ProfileForm({
   origins,
@@ -20,16 +22,14 @@ export default function ProfileForm({
   editingProfile: boolean;
   maxOrigins: number
 }) {
+  const formattedStationData = stationData.map(station => ({
+    label: station.NAME,
+    value: station.ALPHA
+  }));
 
-  const initialOptions = [
-    { label: 'London Bridge (LBG)', value: 'LBG' },
-    { label: 'London Victoria (VIC)', value: 'VIC' },
-    { label: 'Blackheath (BKH)', value: 'BKH' },
-    { label: 'Hither Green (HGR)', value: 'HGR' }
-  ];
+  const [options] = useState(formattedStationData);
+  const [filteredOptions, setFilteredOptions] = useState(formattedStationData);
 
-  const [options, setOptions] = useState(initialOptions);
-  const [filteredOptions, setFilteredOptions] = useState(initialOptions);
 
   const fuse = new Fuse(options, {
     keys: ['label', 'value'],
@@ -37,17 +37,13 @@ export default function ProfileForm({
   });
 
   const handleInputChange = (inputValue: string, { action }: InputActionMeta) => {
-    console.log('Input change:', inputValue);
     if (action === 'input-change') {
       if (!inputValue) {
         setFilteredOptions(options);
         return;
       }
       const results = fuse.search(inputValue);
-      setFilteredOptions(results.map(result => result.item));
-      results.forEach(result => {
-        console.log("Item", result.item);
-      });
+      setFilteredOptions(results.map(result => result.item)); 
     }
   };
   return (
@@ -89,4 +85,4 @@ export default function ProfileForm({
       </Button>
     </Form>
   );
-};
+}

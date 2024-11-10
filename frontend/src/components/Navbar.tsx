@@ -1,12 +1,32 @@
 import React from 'react';
-import { Navbar as StyledNavbar, NavBrand, LogoutButton } from './ProfileList.styles';
-import { useNavigate } from 'react-router';
+import { isAuthenticated } from 'utils/auth';
+import { NavbarContainer, NavLinks, NavLink, NavBrand, LogoutButton } from 'components/styles/Navbar.styles';
+import { useNavigate } from 'react-router-dom';
 
-export default function Navbar({onLogout}: { onLogout: () => void}) {
+export default function Navbar() {
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    console.log('Logging out');
+    navigate('/logout');
+  };
+
   return (
-    <StyledNavbar>
-      <NavBrand>Train App</NavBrand>
-      <LogoutButton onClick={onLogout}>Logout</LogoutButton>
-    </StyledNavbar>
+    <NavbarContainer>
+      <NavBrand>Rapid Rail Times UK</NavBrand>
+      <NavLinks>
+        {isAuthenticated() ? (
+          <>
+            <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
+          </>
+        ) : (
+          <>
+            <NavLink href="/login">Login</NavLink>
+            <NavLink href="/signup">Sign Up</NavLink>
+          </>
+        )}
+      </NavLinks>
+    </NavbarContainer>
   );
-};
+}

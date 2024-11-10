@@ -1,46 +1,68 @@
 # routes.py
-from fastapi import APIRouter, Depends, HTTPException, Query
-from celery.result import AsyncResult
-from app.tasks import get_train_routes_task
+from fastapi import APIRouter, HTTPException, Query
+from app.core.state import app_state
+from app.simple_queue import async_task
+from app.services.train_service import get_train_routes
 from typing import List
 from loguru import logger
-from pydantic import BaseModel
 import time
 
 train_router = APIRouter()
 
+@async_task
+def get_train_routes_task(origins: List[str], destinations: List[str], forceFetch: bool):
+    """
+    Async version of the train routes task.
+    Returns the task ID immediately, use get_result to fetch the actual result.
+    """
+    return get_train_routes(origins, destinations, forceFetch)
+
+
 @train_router.get("/train_routes/")
-async def read_train_routes(origins: List[str] = Query(..., alias="origins[]"), destinations: List[str] = Query(..., alias="destinations[]")):
-    logger.info(f"Requested routes for {origins} to {destinations}")
+async def read_train_routes(
+    origins: List[str] = Query(..., alias="origins[]"),
+    destinations: List[str] = Query(..., alias="destinations[]"),
+    forceFetch: bool = Query(False)
+):
+
+    logger.info(f"Requested routes for {origins} to {destinations} with forceFetch={forceFetch}")
 
     try:
-        task = get_train_routes_task.delay(origins, destinations)
-        logger.info(f"Task ID: {task.id}")
+        # Start the task and return immediately with task ID
+        task_id = await get_train_routes_task(origins, destinations, forceFetch)
+        logger.info(f"New task ID: {task_id}")
         
-        while not task.ready():
-            logger.info("Task not ready yet...")
-            time.sleep(1)
+        return {
+            "status": "pending",
+            "task_id": task_id,
+            "check_status_url": f"/train_routes/task_status/{task_id}"
+        }
         
-        if task.successful():
-            return {"status": "Success", "result": task.result}
-        else:
-            raise HTTPException(status_code=500, detail=f"Task failed: {task.result}")
     except Exception as e:
-        logger.error(f"Error starting Celery task: {e}")
+        logger.error(f"Error starting task: {e}")
         raise HTTPException(status_code=500, detail="Failed to start task")
 
-@train_router.get("/task_status/{task_id}")
-def get_task_status(task_id: str):
-    task_result = AsyncResult(task_id)
+@train_router.get("/train_routes/task_status/{task_id}")
+async def get_task_status(task_id: str):
+    try:
+        result = await app_state.task_manager.get_result(task_id, timeout=0.1)
 
-    if task_result.state == 'PENDING':
-        response = {"state": task_result.state, "status": "Pending..."}
-    elif task_result.state == 'SUCCESS':
-        response = {"state": task_result.state, "result": task_result.result}
-    elif task_result.state == 'FAILURE':
-        response = {"state": task_result.state, "status": str(task_result.info)}
-    else:
-        response = {"state": task_result.state, "status": "Unknown state"}
-
-    return response
-
+        if result['status'] == 'completed':
+            return {
+                "status": "completed",
+                "result": result['result']
+            }
+        elif result['status'] == 'failed':
+            return {
+                "status": "failed",
+                "error": result['result']
+            }
+        
+    except TimeoutError:
+        return {
+            "status": "pending",
+            "task_id": task_id
+        }
+    except Exception as e:
+        logger.error(f"Error checking task status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to check task status")

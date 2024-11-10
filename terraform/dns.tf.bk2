@@ -1,0 +1,14 @@
+# Create DNS zone
+resource "google_dns_managed_zone" "domain_zone" {
+  name        = "rail-times-zone"
+  dns_name    = "rail-times-uk.com."
+  description = "DNS zone for rail-times app"
+}
+
+resource "google_dns_record_set" "domain_verification" {
+  name         = "rail-times-uk.com."
+  managed_zone = google_dns_managed_zone.domain_zone.name
+  type         = "TXT"
+  ttl          = 300
+  rrdatas      = ["google-site-verification=4DusUkjGsSnzZ-a7UQR2Mhjl4CpxCQHBUWSyU-23dZ0"]  # Replace with code from Search Console
+}
