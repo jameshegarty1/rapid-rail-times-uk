@@ -18,5 +18,5 @@ else
 fi
 
 log "Starting podman compose services..."
-podman compose up -d
+podman compose --env-file .env.dev up -d
 log "Services started."

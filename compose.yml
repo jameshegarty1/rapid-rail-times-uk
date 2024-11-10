@@ -37,8 +37,8 @@ services:
     environment:
       PYTHONPATH: .
       DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/postgres'
-      WSDL: http://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2021-11-01
-      LDB_TOKEN: 55435278-c2e4-4799-8636-ffbe1136dcae
+      WSDL: ${WSDL}
+      LDB_TOKEN: ${LDB_TOKEN}
     depends_on:
       - "postgres"
 
@@ -51,7 +51,8 @@ services:
       - './frontend:/app:cached'
       - './frontend/node_modules:/app/node_modules:cached'
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=development 
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
 
 
 volumes:
