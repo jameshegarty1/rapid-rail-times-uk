@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "google" {
-  credentials = file(".pk/rail-times-uk-4fc7356a921b.json")
+  credentials = file("${path.module}/.key.json")
   project     = var.project_id
   region      = var.region
 }
