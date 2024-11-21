@@ -15,21 +15,28 @@ resource "google_cloud_run_v2_service" "frontend" {
       }
       resources {
         limits = {
-          memory = "512Mi"
-          cpu    = "1"
+          memory = "128Mi"
+          cpu    = "0.5"
         }
+        cpu_idle = true
       }
-
+      
     }
     vpc_access{
       connector = google_vpc_access_connector.vpc_connector.id
       egress = "ALL_TRAFFIC"
     }
 
-    # Specify service account for this service
+    scaling {
+        min_instance_count = 0
+        max_instance_count = 1
+    }
+
+    max_instance_request_concurrency = 1
+
+
     service_account = var.google_service_account
-    # Set timeout for the service, if needed
-    timeout = "300s" 
+    timeout = "60s" 
   }
 
   depends_on = [
@@ -49,10 +56,13 @@ resource "google_cloud_run_v2_service" "backend" {
       image = var.backend_image_url
       resources {
         limits = {
-          memory = "512Mi"
-          cpu    = "1"
+          memory = "128Mi"
+          cpu    = "0.5"
         }
+
+      cpu_idle = true
       }
+      
       env {
         name = "DB_PASSWORD"
         value_source {
@@ -86,11 +96,16 @@ resource "google_cloud_run_v2_service" "backend" {
       egress = "ALL_TRAFFIC"
     }
 
-    # Specify service account for this service
+    scaling {
+        min_instance_count = 0
+        max_instance_count = 1
+    }
+
+    max_instance_request_concurrency = 1
+   
     service_account = var.google_service_account
 
-    # Set the timeout for the service, if needed
-    timeout = "300s"
+    timeout = "60s"
 
     
 

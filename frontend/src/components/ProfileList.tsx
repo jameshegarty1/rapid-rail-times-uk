@@ -8,8 +8,10 @@ import {
 import ProfileForm from 'components/ProfileForm';
 import ProfileCard from 'components/ProfileCard';
 import { MultiValue, ActionMeta } from 'react-select';
+import { Watch } from 'react-loader-spinner';
 import useProfiles from 'hooks/useProfiles';
 import { Profile } from 'utils/interfaces'
+import { LoadingContainer } from 'components/styles/ProfileCard.styles'
 
 export default function ProfileList() {
   const {
@@ -79,6 +81,21 @@ export default function ProfileList() {
     handleFetchTrains(profile.origins, profile.destinations, profile.id);
   };
 
+ if (loading.global) {
+    return (
+      <LoadingContainer>
+        <Watch
+          visible={true}
+          height="40"
+          width="40"
+          ariaLabel="watch-loading"
+          wrapperStyle={{}}
+          wrapperClass=""
+          color="#4fa94d" />
+      </LoadingContainer>
+    );
+  }
+
  return (
     <div>
       <Container>
@@ -94,6 +111,18 @@ export default function ProfileList() {
         />
 
         {error && <Error>{error}</Error>}
+
+        {loading.global ? (<LoadingContainer>
+        <Watch
+          visible={true}
+          height="40"
+          width="40"
+          ariaLabel="watch-loading"
+          wrapperStyle={{}}
+          wrapperClass=""
+          color="#4fa94d" />
+      </LoadingContainer>
+) : (
 
         <Row>
           {profiles.map((profile) => (
@@ -112,6 +141,7 @@ export default function ProfileList() {
             </Col>
           ))}
         </Row>
+        )}
       </Container>
     </div>
   );
