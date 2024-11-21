@@ -6,7 +6,7 @@ interface LinkedTrainData {
     [profileId: number]: Train[];
 }
 
-interface MemoizedData {
+interface MemoizedTrains {
     trains: Train[];
     lastFetchTime: Date;
 }
@@ -43,7 +43,7 @@ export default function useProfiles(): UseProfilesReturn {
     const [error, setError] = useState<string | null>(null);
     const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
 
-    const memoizedTrains = useRef<{ [key: string]: MemoizedData }>({});
+    const memoizedTrains = useRef<{ [key: string]: MemoizedTrains }>({});
 
     useEffect(() => {
         const loadProfiles = async () => {
