@@ -7,6 +7,10 @@ terraform {
       source  = "hashicorp/time"
     }
   }
+  backend "gcs" {
+    bucket = "rail-times-uk-terraform-state"
+    prefix = "terraform/state"
+  }
 }
 
 provider "google" {
