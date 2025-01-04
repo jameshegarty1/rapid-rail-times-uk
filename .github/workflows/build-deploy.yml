@@ -44,6 +44,16 @@ jobs:
           ls -la frontend/
           echo "Package files:"
           ls -la frontend/package*
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          platforms: linux/amd64
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ secrets.FRONTEND_REPO_NAME }}:v${{ env.VERSION }}
+          build-args: |
+            REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}
       
       - name: Build and push backend
         uses: docker/build-push-action@v4
@@ -55,16 +65,7 @@ jobs:
           build-args: |
             LDB_TOKEN=${{ env.LDB_TOKEN }}
             WSDL=${{ secrets.WSDL }}
-          
-      - name: Build and push frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          push: true
-          platforms: linux/amd64
-          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ secrets.FRONTEND_REPO_NAME }}:v${{ env.VERSION }}
-          build-args: |
-            REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}
+        
 
   deploy:
     needs: build
