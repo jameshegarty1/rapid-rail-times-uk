@@ -48,7 +48,6 @@ jobs:
             WSDL=${{ secrets.WSDL }}
           
       - name: Build and push frontend
-        if: github.event_name == 'push' && contains(github.event.commits[0].modified, 'frontend/')
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
