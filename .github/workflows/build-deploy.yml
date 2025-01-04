@@ -98,6 +98,9 @@ jobs:
           frontend_domain = "www"
           db_password = "${{ secrets.DB_PASSWORD }}"
           google_service_account = "${{ secrets.GOOGLE_SERVICE_ACCOUNT }}"
+          google_credentials = <<EOT
+          ${{ env.GCP_SA_KEY }}
+          EOT
           EOF
         
       - name: Terraform Plan

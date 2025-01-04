@@ -51,3 +51,9 @@ variable "frontend_domain" {
 variable "google_service_account" {
   type        = string
 }
+
+variable "google_credentials" {
+  description = "Google Cloud credentials JSON"
+  type        = string
+  default     = null  # Will be null when using .key.json file
+}

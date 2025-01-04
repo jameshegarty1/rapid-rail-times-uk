@@ -14,7 +14,7 @@ terraform {
 }
 
 provider "google" {
-  credentials = file("${path.module}/.key.json")
+  credentials = try(file("${path.module}/.key.json"), var.google_credentials)
   project     = var.project_id
   region      = var.region
 }
