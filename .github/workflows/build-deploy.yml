@@ -59,6 +59,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
     
     steps:
       - uses: actions/checkout@v3
@@ -79,12 +80,31 @@ jobs:
       - name: Terraform Init
         working-directory: ./terraform
         run: terraform init
+
+      - name: Create tfvars file
+        working-directory: ./terraform
+        run: |
+          cat > terraform.tfvars << EOF
+          project_id = "rail-times-uk"
+          region = "europe-west1"
+          backend_service_name = "rtuk-backend"
+          frontend_service_name = "rtuk-frontend"
+          backend_image_url = "docker.io/${{ env.DOCKERHUB_USERNAME }}/${{ secrets.BACKEND_REPO_NAME }}:v${{ env.VERSION }}"
+          frontend_image_url = "docker.io/${{ env.DOCKERHUB_USERNAME }}/${{ secrets.FRONTEND_REPO_NAME }}:v${{ env.VERSION }}"
+          frontend_url = "${{ secrets.FRONTEND_URL }}"
+          backend_url = "${{ secrets.BACKEND_URL }}"
+          api_key = "${{ secrets.API_KEY }}"
+          domain = "rail-times-uk.com"
+          frontend_domain = "www"
+          db_password = "${{ secrets.DB_PASSWORD }}"
+          google_service_account = "${{ secrets.GOOGLE_SERVICE_ACCOUNT }}"
+          EOF
         
       - name: Terraform Plan
         working-directory: ./terraform
-        run: terraform plan -var-file=.tfvars
+        run: terraform plan -var-file=terraform.tfvars
         
       - name: Terraform Apply
         working-directory: ./terraform
         if: github.ref == 'refs/heads/master'
-        run: terraform apply -var-file=.tfvars -auto-approve
+        run: terraform apply -var-file=terraform.tfvars -auto-approve
