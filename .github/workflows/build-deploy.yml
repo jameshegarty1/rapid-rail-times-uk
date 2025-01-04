@@ -35,6 +35,15 @@ jobs:
       
       - name: Set version
         run: echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+
+      - name: Debug directory content
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Directory contents:"
+          ls -la frontend/
+          echo "Package files:"
+          ls -la frontend/package*
       
       - name: Build and push backend
         uses: docker/build-push-action@v4
