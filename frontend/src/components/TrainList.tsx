@@ -76,7 +76,7 @@ export default function TrainList({ trains, destinations }: TrainListProps) {
                   <Badge
                     variant={
                       train.estimated_departure === 'On time'
-                        ? 'success'
+                        ? 'default'
                         : 'destructive'
                     }
                     className={`
