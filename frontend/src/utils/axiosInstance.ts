@@ -1,10 +1,14 @@
 // axiosInstance.ts
 import axios from 'axios';
+//baseURL: import.meta.env.REACT_APP_API_URL,
 
 // Set the base URL for the API
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL,
+    // todo: change the name from REACT_APP
+    baseURL: "http://localhost:8000"
 });
+
+console.log(axiosInstance);
 
 // Add a request interceptor to include the token in all requests
 axiosInstance.interceptors.request.use(

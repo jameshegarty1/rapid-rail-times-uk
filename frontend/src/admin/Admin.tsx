@@ -1,9 +1,9 @@
 import React from 'react';
 import { fetchUtils, Admin as ReactAdmin, Resource } from 'react-admin';
 import simpleRestProvider from 'ra-data-simple-rest';
-import authProvider from 'admin/authProvider';
+import authProvider from './authProvider';
 
-import { UserList, UserEdit, UserCreate } from 'admin/Users';
+import { UserList, UserEdit, UserCreate } from './Users';
 
 // Define the custom HTTP client
 const httpClient = (url: string, options: RequestInit = {}) => {
