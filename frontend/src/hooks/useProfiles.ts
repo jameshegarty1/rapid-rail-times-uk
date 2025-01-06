@@ -31,6 +31,8 @@ interface UseProfilesReturn {
     setError: React.Dispatch<React.SetStateAction<string | null>>;
     lastFetchTime: { [profileId: number]: Date | null };
     setLastFetchTime: React.Dispatch<React.SetStateAction<{ [profileId: number]: Date | null }>>;
+    expandedProfileId: number | null;
+    setExpandedProfileId: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
 export default function useProfiles(): UseProfilesReturn {
@@ -42,6 +44,7 @@ export default function useProfiles(): UseProfilesReturn {
     const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
     const [error, setError] = useState<string | null>(null);
     const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+    const [expandedProfileId, setExpandedProfileId] = useState<number | null>(null);
 
     const memoizedTrains = useRef<{ [key: string]: MemoizedTrains }>({});
 
@@ -153,7 +156,9 @@ export default function useProfiles(): UseProfilesReturn {
         setLoading,
         setError,
         lastFetchTime,
-        setLastFetchTime
+        setLastFetchTime,
+        expandedProfileId,
+        setExpandedProfileId,
     };
 }
 

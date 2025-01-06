@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
-import Select, { MultiValue, ActionMeta, InputActionMeta } from 'react-select';
-import Fuse from 'fuse.js';
-import { Form, Button } from 'components/styles/ProfileList.styles';
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import StationSelector from './StationSelector';
+import stationData from '../config/stations.json';
+import {ArrowDown, ArrowRight, Train} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import trainIcon from '../assets/train.svg';
 
-import stationData from 'config/stations.json'
+interface ProfileFormProps {
+  origins: string[];
+  destinations: string[];
+  loading: boolean;
+  onChange: (values: string[], fieldName: 'origins' | 'destinations') => void;
+  onSubmit: (e: React.FormEvent) => void;
+  editingProfile: boolean;
+  onEditingProfileChange: (editing: boolean) => void;
+  maxOrigins: number;
+}
 
 export default function ProfileForm({
   origins,
@@ -12,77 +24,93 @@ export default function ProfileForm({
   onChange,
   onSubmit,
   editingProfile,
-  maxOrigins
-}: {
-  origins: string[];
-  destinations: string[];
-  loading: boolean;
-  onChange: (selectedOptions: MultiValue<{ label: string; value: string }>, actionMeta: ActionMeta<{ label: string; value: string }>, fieldName: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  editingProfile: boolean;
-  maxOrigins: number
-}) {
-  const formattedStationData = stationData.map(station => ({
-    label: station.NAME,
-    value: station.ALPHA
-  }));
-
-  const [options] = useState(formattedStationData);
-  const [filteredOptions, setFilteredOptions] = useState(formattedStationData);
-
-
-  const fuse = new Fuse(options, {
-    keys: ['label', 'value'],
-    threshold: 0.3, // Adjust threshold according to your needs
-  });
-
-  const handleInputChange = (inputValue: string, { action }: InputActionMeta) => {
-    if (action === 'input-change') {
-      if (!inputValue) {
-        setFilteredOptions(options);
-        return;
-      }
-      const results = fuse.search(inputValue);
-      setFilteredOptions(results.map(result => result.item)); 
-    }
+  onEditingProfileChange,
+  maxOrigins,
+}: ProfileFormProps) {
+  const handleFormReset = (e: React.MouseEvent) => {
+    //e.preventDefault();
+    onChange([], 'origins');
+    onChange([], 'destinations');
+    onEditingProfileChange(false);
   };
   return (
-    <Form onSubmit={onSubmit}>
-      <Select
-        options={filteredOptions}
-        isMulti
-        value={origins.map(origin => ({ label: origin, value: origin }))}
-        onChange={(selectedOptions, actionMeta) => {
-          console.log('Origins onChange called', selectedOptions, actionMeta);
-          if (selectedOptions.length > maxOrigins) {
-            console.warn(`Maximum of ${maxOrigins} options can be selected`);
-            return;
-          }
-          onChange(selectedOptions as MultiValue<{ label: string; value: string }>, actionMeta, 'origins');
-        }}
-        placeholder="Select origins"
-        onInputChange={handleInputChange}
-        backspaceRemovesValue
-        tabSelectsValue
-        required
-      />
+    <form
+      onSubmit={onSubmit}
+      className="w-full px-4 sm:px-6 md:px-8 mx-auto max-w-xl sm:max-w-2xl md:max-w-4xl"
+    >
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col md:flex-row md:items-start gap-2 sm:gap-4">
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-700">
+                <div className="flex items-center w-full">
+                  <span>From</span>
+                  <img src={trainIcon} alt="Train" className="w-16 h-16 ml-auto" />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StationSelector
+                label="Origins"
+                selectedStations={origins}
+                onChange={(values) => onChange(values, 'origins')}
+                stations={stationData}
+                maxSelections={maxOrigins}
+              />
+            </CardContent>
+          </Card>
 
-      <Select
-        isMulti
-        options={filteredOptions}
-        value={destinations.map(destination => ({ label: destination, value: destination }))}
-        onChange={(selectedOptions, actionMeta) => {
-          console.log('Destinations onChange called', selectedOptions, actionMeta);
-          onChange(selectedOptions as MultiValue<{ label: string; value: string }>, actionMeta, 'destinations');
-        }}        placeholder="Select destinations"
-        onInputChange={handleInputChange}
-        backspaceRemovesValue
-        tabSelectsValue
-      />
- 
-      <Button type="submit" disabled={loading}>
-        {editingProfile ? 'Update Profile' : 'Create Profile'}
-      </Button>
-    </Form>
+          <div className="flex justify-center items-center py-2 md:py-8">
+            <ArrowDown className="h-6 w-6 text-gray-400 md:hidden" />
+            <ArrowRight className="hidden md:block h-6 w-6 text-gray-400" />
+          </div>
+
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-700">
+                <div className="flex items-center w-full">
+                  <span>To</span>
+                  <img src={trainIcon} alt="Train" className="w-16 h-16 ml-auto scale-x-[-1]" />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StationSelector
+                label="Destinations"
+                selectedStations={destinations}
+                onChange={(values) => onChange(values, 'destinations')}
+                stations={stationData}
+              />
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-row lg:flex-col gap-2 sm:gap-4 mt-4 sm:mt-6">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full sm:flex-1 px-4 py-2 text-sm sm:text-base"
+            >
+              {loading
+                ? 'Processing...'
+                : editingProfile
+                ? 'Update Profile'
+                : 'Create Profile'}
+            </Button>
+
+            {(origins.length > 0 || destinations.length > 0) && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                className="w-fullsm:flex-1 px-4 py-2 text-sm sm:text-base"
+                onClick={handleFormReset}
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </form>
   );
 }
