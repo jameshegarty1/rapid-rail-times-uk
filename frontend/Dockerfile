@@ -18,7 +18,7 @@ ARG VITE_API_URL
 # Set environment variables from build arguments
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN sed -i "s|\$VITE_API_URL|$VITE_API_URL|g" .env
+RUN echo "VITE_API_URL=$VITE_API_URL" > .env
 
 # Build the React app for production
 RUN npm run build
