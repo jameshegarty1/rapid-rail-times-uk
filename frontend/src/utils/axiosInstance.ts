@@ -1,11 +1,11 @@
 // axiosInstance.ts
 import axios from 'axios';
-//baseURL: import.meta.env.REACT_APP_API_URL,
+//
 
 // Set the base URL for the API
 const axiosInstance = axios.create({
     // todo: change the name from REACT_APP
-    baseURL: "http://localhost:8000"
+    baseURL: import.meta.env.REACT_APP_API_URL ?? 'http://localhost:8000'
 });
 
 console.log(axiosInstance);
