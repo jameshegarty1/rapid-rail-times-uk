@@ -6,7 +6,7 @@ resource "google_cloud_run_v2_service" "frontend" {
     containers {
       image = var.frontend_image_url
       env {
-        name  = "REACT_APP_API_URL"
+        name  = "VITE_API_URL"
         value = var.backend_url
       }
       env {

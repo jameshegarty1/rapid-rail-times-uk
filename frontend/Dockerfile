@@ -13,10 +13,10 @@ RUN npm install
 COPY . .
 
 # Define build arguments
-ARG REACT_APP_API_URL
+ARG VITE_API_URL
 
 # Set environment variables from build arguments
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # Build the React app for production
 RUN npm run build
