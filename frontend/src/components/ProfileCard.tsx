@@ -7,6 +7,7 @@ import { Watch } from 'react-loader-spinner';
 import TrainList from './TrainList';
 import { Train } from '../utils/interfaces';
 import stationData from '../config/stations.json';
+import {getTimeFromString} from '../lib/utils';
 
 const createAlphaToNameMap = (stations: { ALPHA: string; NAME: string }[]) => {
   const map: { [key: string]: string } = {};
@@ -66,6 +67,7 @@ export default function ProfileCard({
     if (!trains.length) return null;
 
     const now = new Date().getTime(); // Get timestamp once
+    console.log("Now: ", now.toString());
 
     // Find next train in a single pass through the array
     const nextTrain = trains.reduce((nearest: Train, train: Train) => {
@@ -75,9 +77,11 @@ export default function ProfileCard({
       // Get departure time once
       const departureTime = new Date(
         train.estimated_departure === 'On time'
-          ? train.scheduled_departure
-          : train.estimated_departure
+          ? getTimeFromString(train.scheduled_departure)
+          : getTimeFromString(train.estimated_departure)
       ).getTime();
+
+      console.log("DepTime: ", departureTime.toString());
 
       // Skip trains that have already departed
       if (departureTime < now) return nearest;
@@ -88,8 +92,8 @@ export default function ProfileCard({
         departureTime <
           new Date(
             nearest.estimated_departure === 'On time'
-              ? nearest.scheduled_departure
-              : nearest.estimated_departure
+              ? getTimeFromString(nearest.scheduled_departure)
+              : getTimeFromString(nearest.estimated_departure)
           ).getTime()
       ) {
         return train;
@@ -100,12 +104,20 @@ export default function ProfileCard({
 
     if (!nextTrain) return null;
 
-    return formatDistanceToNow(new Date(nextTrain.scheduled_departure), {
-      addSuffix: true,
-    });
-  };
+    let nextTrainTime: number | null;
+
+    if (nextTrain.estimated_departure === 'On time') {
+      nextTrainTime = getTimeFromString(nextTrain.scheduled_departure)
+    } else {
+      nextTrainTime = getTimeFromString(nextTrain.estimated_departure)
+    }
+
+    return formatDistanceToNow(nextTrainTime)
+    };
 
   const nextTrainTime = getNextTrain();
+
+
 
   return (
     <Card
