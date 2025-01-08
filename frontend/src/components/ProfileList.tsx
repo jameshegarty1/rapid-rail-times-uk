@@ -4,7 +4,7 @@ import { TrainFront } from 'lucide-react';
 import ProfileCard from './ProfileCard';
 import { Watch } from 'react-loader-spinner';
 import useProfiles from '../hooks/useProfiles';
-import NewRoute from "@/components/NewRoute";
+import NewRoute from "./NewRoute";
 import {Profile} from "@/utils/interfaces";
 
 export default function ProfileList() {
