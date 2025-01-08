@@ -64,23 +64,10 @@ export default function Home() {
                 <Gauge className="h-8 w-8 text-blue-600 mb-4" />
                 <h3 className="font-semibold text-lg mb-2">Quick Route</h3>
                 <p className="text-gray-600">
-                  Check the departure board for any station within seconds
+                  Check the departure board for any station within seconds.
                 </p>
               </CardContent>
             </Card>
-
-            {/*<Card>
-              <CardContent className="pt-6">
-                <Bell className="h-8 w-8 text-blue-600 mb-4" />
-                <h3 className="font-semibold text-lg mb-2">
-                  Smart Notifications
-                </h3>
-                <p className="text-gray-600">
-                  Set up alerts for your regular journeys and never miss
-                  important updates.
-                </p>
-              </CardContent>
-            </Card>*/}
           </div>
 
           {/* Call to Action */}

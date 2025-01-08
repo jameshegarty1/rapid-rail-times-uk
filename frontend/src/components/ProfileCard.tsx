@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React  from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, RefreshCcw, Edit2, Trash2 } from 'lucide-react';
+import { MapPin, RefreshCcw, Edit2, Trash2, Star } from 'lucide-react';
 import { Watch } from 'react-loader-spinner';
 import TrainList from './TrainList';
 import { Train } from '../utils/interfaces';
@@ -35,6 +35,8 @@ interface ProfileCardProps {
   trains?: Train[];
   lastFetchTime?: Date | null;
   loading: boolean;
+  isFavorite: boolean;
+  onFavoriteToggle: () => void;
 }
 
 export default function ProfileCard({
@@ -50,6 +52,8 @@ export default function ProfileCard({
   trains = [],
   lastFetchTime,
   loading,
+  isFavorite,
+  onFavoriteToggle,
 }: ProfileCardProps) {
   const handleToggleExpand = () => {
     onExpand();
@@ -58,18 +62,81 @@ export default function ProfileCard({
     }
   };
 
+  const getNextTrain = () => {
+    if (!trains.length) return null;
+
+    const now = new Date().getTime(); // Get timestamp once
+
+    // Find next train in a single pass through the array
+    const nextTrain = trains.reduce((nearest: Train, train: Train) => {
+      // Skip cancelled trains
+      if (train.is_cancelled) return nearest;
+
+      // Get departure time once
+      const departureTime = new Date(
+        train.estimated_departure === 'On time'
+          ? train.scheduled_departure
+          : train.estimated_departure
+      ).getTime();
+
+      // Skip trains that have already departed
+      if (departureTime < now) return nearest;
+
+      // If no nearest train yet, or this train is sooner
+      if (
+        !nearest ||
+        departureTime <
+          new Date(
+            nearest.estimated_departure === 'On time'
+              ? nearest.scheduled_departure
+              : nearest.estimated_departure
+          ).getTime()
+      ) {
+        return train;
+      }
+
+      return nearest;
+    });
+
+    if (!nextTrain) return null;
+
+    return formatDistanceToNow(new Date(nextTrain.scheduled_departure), {
+      addSuffix: true,
+    });
+  };
+
+  const nextTrainTime = getNextTrain();
+
   return (
     <Card
-      className="hover:shadow-lg transition-all duration-200 cursor-pointer ${
-    expanded ? 'h-auto' : 'h-fit'
-  }"
+      className={`group transition-all duration-200 cursor-pointer hover:shadow-lg
+        ${expanded ? 'h-auto' : 'h-fit'}`}
       onClick={(e) => {
         e.preventDefault();
         handleToggleExpand();
       }}
     >
-      <CardContent className="p-6 sm:p-6">
-        <div className="space-y-6 sm:space-y-6">
+      <CardContent className="p-4 sm:p-6">
+        <div className="space-y-4 sm:space-y-6">
+          {/* Header with Favorite Button */}
+          <div className="flex items-start justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`-mt-1 -ml-2 p-2 ${
+                isFavorite ? 'text-yellow-500' : 'text-gray-400'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFavoriteToggle();
+              }}
+            >
+              <Star
+                className="h-5 w-5"
+                fill={isFavorite ? 'currentColor' : 'none'}
+              />
+            </Button>
+          </div>
           {/* Route Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* From Section */}
@@ -112,8 +179,15 @@ export default function ProfileCard({
             </div>
           </div>
 
+          {/* Next Train Info for Favorite */}
+          {isFavorite && nextTrainTime && !loading && (
+            <div className="text-sm sm:text-base text-gray-600 font-medium">
+              Next train {nextTrainTime}
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex items-center justify-end  gap-2">
+          <div className="flex items-center justify-end gap-2 scale-120">
             <Button
               variant="outline"
               size="sm"
@@ -164,7 +238,7 @@ export default function ProfileCard({
                     ariaLabel="watch-loading"
                     wrapperStyle={{}}
                     wrapperClass=""
-                    color="#4fa94d"
+                    color="#1e293b"
                   />
                 </div>
               ) : (
