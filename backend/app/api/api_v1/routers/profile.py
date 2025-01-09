@@ -7,6 +7,7 @@ from app.db.crud.profile_crud import (
     create_profile,
     update_profile,
     delete_profile,
+    set_profile_as_favourite,
 )
 from app.core.auth import get_current_active_user
 
@@ -36,3 +37,9 @@ def delete_profile_endpoint(profile_id: int, db: Session = Depends(get_db), curr
     delete_profile(db=db, profile_id=profile_id)
     return None
 
+@r.post("/{profile_id}/favourite")
+def set_favourite(
+    profile_id: int,
+    db: Session = Depends(get_db)
+):
+    return set_profile_as_favourite(db, profile_id)

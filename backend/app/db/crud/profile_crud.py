@@ -20,7 +20,8 @@ def create_profile(db: Session, profile: ProfileCreate, user_id: int) -> profile
     db_profile = profile_model.Profile(
         origins_list=profile.origins,
         destinations_list=profile.destinations,
-        user_id=user_id
+        user_id=user_id,
+        favourite=False
     )
     db.add(db_profile)
     db.commit()
@@ -40,3 +41,19 @@ def delete_profile(db: Session, profile_id: int) -> None:
     db_profile = db.query(profile_model.Profile).filter(profile_model.Profile.id == profile_id).first()
     db.delete(db_profile)
     db.commit()
+
+
+def set_profile_as_favourite(db: Session, profile_id: int, user_id: int):
+    profile = db.query(profile_model.Profile) \
+        .filter(profile_model.Profile.id == profile_id).first()
+    db.query(profile_model.Profile) \
+        .filter(profile_model.Profile.user_id == profile.user) \
+        .update({profile_model.Profile.favourite: False})
+
+    profile = db.query(profile_model.Profile) \
+        .filter(profile_model.Profile.id == profile_id) \
+        .first()
+    if profile:
+        profile.favourite = True
+        db.commit()
+    return profile.to_dict()

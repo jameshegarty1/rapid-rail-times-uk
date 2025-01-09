@@ -6,10 +6,10 @@ class ProfileBase(BaseModel):
     destinations: List[str]
 
 class ProfileCreate(ProfileBase):
-    pass
+    favourite: bool = False
 
 class ProfileUpdate(ProfileBase):
-    pass
+    favourite: bool
 
 class Profile(ProfileBase):
     id: int
