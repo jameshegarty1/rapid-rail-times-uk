@@ -4,8 +4,8 @@ import { TrainFront } from 'lucide-react';
 import ProfileCard from './ProfileCard';
 import { Watch } from 'react-loader-spinner';
 import useProfiles from '../hooks/useProfiles';
-import NewRoute from "./NewRoute";
-import {Profile} from "@/utils/interfaces";
+import NewRoute from './NewRoute';
+import { Profile } from '@/utils/interfaces';
 
 export default function ProfileList() {
   const {
@@ -18,51 +18,75 @@ export default function ProfileList() {
     handleUpdateProfile,
     handleCreateProfile,
     handleFetchTrains,
+    handleFavouriteProfile,
     lastFetchTime,
-    favoriteProfileId,
-    setFavoriteProfileId,
+    favouriteProfileId,
+    setFavouriteProfileId,
   } = useProfiles();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
 
-  const loadFavoriteTrains = async () => {
-    const favoriteProfile = profiles.find((p) => p.id === favoriteProfileId);
-    if (favoriteProfile) {
+  const loadFavouriteTrains = async () => {
+    const favouriteProfile = profiles.find((p) => p.id === favouriteProfileId);
+    if (favouriteProfile) {
       await handleFetchTrains(
-          favoriteProfile.origins,
-          favoriteProfile.destinations,
-          favoriteProfile.id
+          favouriteProfile.origins,
+          favouriteProfile.destinations,
+          favouriteProfile.id
       );
     }
   };
 
   useEffect(() => {
-    if (!favoriteProfileId) return
-    console.log(
-      'Pre-loading trains for favourite profile: ',
-      favoriteProfileId
-    );
-    loadFavoriteTrains();
-  }, [profiles]);
+    const loadFavouriteTrainsIfNeeded = async () => {
+      if (!favouriteProfileId || !profiles.length) return;
+      console.log("Favourite profile ID: ", favouriteProfileId);
+      const favouriteProfile = profiles.find((p) => p.id === favouriteProfileId);
+      if (!favouriteProfile) return;
+
+      console.log('Loading trains for favourite profile:', favouriteProfileId);
+      await handleFetchTrains(
+          favouriteProfile.origins,
+          favouriteProfile.destinations,
+          favouriteProfile.id
+      );
+    };
+
+    loadFavouriteTrainsIfNeeded();
+  }, [favouriteProfileId]);
+
+
 
   const handleCardExpand = (profileId: number) => {
     console.log(
-        'Expanding card:',
-        profileId,
-        'Current expanded:',
-        expandedProfileId
+      'Expanding card:',
+      profileId,
+      'Current expanded:',
+      expandedProfileId
     );
     setExpandedProfileId(expandedProfileId === profileId ? null : profileId);
   };
 
-  const handleFavoriteToggle = (profileId: number) => {
-    setFavoriteProfileId(favoriteProfileId === profileId ? null : profileId);
-    loadFavoriteTrains();
+  const handleFavouriteButtonToggle = (profileId: number) => {
+    const isSet = favouriteProfileId !== profileId;
+    handleFavouriteProfile(profileId, isSet);
+
+    // If setting as favourite, load trains immediately
+    if (isSet) {
+      const profile = profiles.find(p => p.id === profileId);
+      if (profile) {
+        handleFetchTrains(
+            profile.origins,
+            profile.destinations,
+            profile.id
+        );
+      }
+    }
   };
 
   const handleEdit = (profileId: number) => {
-    const profileToEdit = profiles.find(p => p.id === profileId);
+    const profileToEdit = profiles.find((p) => p.id === profileId);
     if (profileToEdit) {
       console.log('Editing profile:', profileToEdit);
       setEditingProfile(profileToEdit);
@@ -76,8 +100,8 @@ export default function ProfileList() {
   };
 
   const sortedProfiles = [...profiles].sort((a, b) => {
-    if (a.id === favoriteProfileId) return -1;
-    if (b.id === favoriteProfileId) return 1;
+    if (a.id === favouriteProfileId) return -1;
+    if (b.id === favouriteProfileId) return 1;
     return 0;
   });
 
@@ -102,26 +126,26 @@ export default function ProfileList() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* NewRoute for creating new routes */}
         <NewRoute
-            onCreateProfile={handleCreateProfile}
-            isOpen={isModalOpen && !editingProfile}
-            isEditing={false}
-            onOpenChange={setIsModalOpen}
-            onClose={handleModalClose}
-            isNewRoute={true}
+          onCreateProfile={handleCreateProfile}
+          isOpen={isModalOpen && !editingProfile}
+          isEditing={false}
+          onOpenChange={setIsModalOpen}
+          onClose={handleModalClose}
+          isNewRoute={true}
         />
 
         {/* NewRoute for editing */}
         {editingProfile && (
-            <NewRoute
-                onCreateProfile={handleCreateProfile}
-                onUpdateProfile={handleUpdateProfile}
-                initialProfile={editingProfile}
-                isEditing={true}
-                isOpen={isModalOpen}
-                onOpenChange={setIsModalOpen}
-                onClose={handleModalClose}
-                isNewRoute={false}
-            />
+          <NewRoute
+            onCreateProfile={handleCreateProfile}
+            onUpdateProfile={handleUpdateProfile}
+            initialProfile={editingProfile}
+            isEditing={true}
+            isOpen={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            onClose={handleModalClose}
+            isNewRoute={false}
+          />
         )}
         {/* Profiles Grid */}
         <div className="flex flex-col sm:flex-row flex-wrap gap-4 sm:gap-0">
@@ -156,8 +180,8 @@ export default function ProfileList() {
                     trains={linkedTrainsData[profile.id]}
                     lastFetchTime={lastFetchTime[profile.id]}
                     loading={loading[profile.id] || false}
-                    isFavorite={profile.id === favoriteProfileId}
-                    onFavoriteToggle={() => handleFavoriteToggle(profile.id)}
+                    isFavourite={profile.id === favouriteProfileId}
+                    onFavouriteToggle={() => handleFavouriteButtonToggle(profile.id)}
                   />
                 </div>
               ))}
@@ -194,8 +218,8 @@ export default function ProfileList() {
                     trains={linkedTrainsData[profile.id]}
                     lastFetchTime={lastFetchTime[profile.id]}
                     loading={loading[profile.id] || false}
-                    isFavorite={profile.id === favoriteProfileId}
-                    onFavoriteToggle={() => handleFavoriteToggle(profile.id)}
+                    isFavourite={profile.id === favouriteProfileId}
+                    onFavouriteToggle={() => handleFavouriteButtonToggle(profile.id)}
                   />
                 </div>
               ))}

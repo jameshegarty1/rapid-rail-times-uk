@@ -18,7 +18,9 @@ profile_router = r = APIRouter()
 @r.get("/", response_model=List[profile_schema.Profile])
 def read_profiles_endpoint(db: Session = Depends(get_db), current_user: user_schema.User = Depends(get_current_active_user)):
     profiles = get_profiles(db=db, user_id=current_user.id)
-    return [profile.to_dict() for profile in profiles]
+    logger.info(f"Sending {len(profiles)} profiles")
+    logger.info(profiles)
+    return profiles
 
 @r.post("/", response_model=profile_schema.Profile)
 def create_profile_endpoint(profile: profile_schema.ProfileCreate, db: Session = Depends(get_db), current_user: user_schema.User = Depends(get_current_active_user)):
@@ -41,5 +43,12 @@ def delete_profile_endpoint(profile_id: int, db: Session = Depends(get_db), curr
 def set_favourite(
     profile_id: int,
     db: Session = Depends(get_db)
-):
+) -> bool:
     return set_profile_as_favourite(db, profile_id)
+
+@r.post("/{profile_id}/unfavourite")
+def set_unfavourite(
+    profile_id: int,
+    db: Session = Depends(get_db),
+) -> bool:
+    return set_profile_as_favourite(db, profile_id, False)

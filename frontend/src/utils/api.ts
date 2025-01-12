@@ -63,6 +63,7 @@ const pollTaskStatus = async (
 
 export const fetchProfiles = async (): Promise<Profile[]> => {
   const response = await axiosInstance.get('/api/v1/profile/');
+  console.log('Raw profile data received:', JSON.stringify(response.data, null, 2));
   return response.data;
 };
 
@@ -84,5 +85,15 @@ export const updateProfile = async (id: number, origins: string[], destinations:
 
 export const deleteProfile = async (id: number): Promise<void> => {
   await axiosInstance.delete(`/api/v1/profile/${id}`);
+};
+
+export const setFavouriteProfile = async (id: number): Promise<Profile> => {
+  const response = await axiosInstance.post(`/api/v1/profile/${id}/favourite`);
+  return response.data;
+};
+
+export const unsetFavouriteProfile = async (id: number): Promise<Profile> => {
+  const response = await axiosInstance.post(`/api/v1/profile/${id}/unfavourite`);
+  return response.data;
 };
 

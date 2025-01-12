@@ -16,7 +16,7 @@ export const isAuthenticated = () => {
   try {
     const decodedToken = jwtDecode<CustomJwtPayload>(token);
     const currentTime = Date.now() / 1000;
-    console.log("Token:", decodedToken)
+    //console.log("Token:", decodedToken)
 
     if (decodedToken.exp && decodedToken.exp < currentTime) {
       console.log("Token has expired.")
@@ -53,7 +53,6 @@ export const login = async (email: string, password: string) => {
     throw new Error('Email or password was not provided');
   }
 
-  console.log("Before making API request...");
   try {
     const data = { username: email, password: password };
     const response = await axiosInstance.post('/api/v1/auth/token', qs.stringify(data), {
@@ -62,7 +61,6 @@ export const login = async (email: string, password: string) => {
       },
     });
 
-    console.log("Got a response!")
 
     const responseData = response.data;
 

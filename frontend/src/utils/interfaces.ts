@@ -19,6 +19,7 @@ export interface Profile {
   id: number;
   origins: string[];
   destinations: string[];
+  favourite: boolean;
 }
 
 export interface CallingPoint {
