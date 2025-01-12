@@ -5,8 +5,11 @@ on:
     inputs:
       version:
         description: 'Version number (e.g. 0.1.6)'
-        required: true
+        required: false
         type: string
+  push:
+    branches:
+      - master
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USER }}
@@ -20,7 +23,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ github.event.inputs.version }}
+      version: ${{ steps.set_version.outputs.version }}
     steps:
       - uses: actions/checkout@v3
       
@@ -32,18 +35,19 @@ jobs:
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
-      
-      - name: Set version
-        run: echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
-      - name: Debug directory content
+      - name: Set version
+        id: set_version
         run: |
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la frontend/
-          echo "Package files:"
-          ls -la frontend/package*
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            # Generate version based on date and commit hash
+            VERSION="$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+            echo "VERSION=${VERSION}" >> $GITHUB_ENV
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT 
+          fi
 
       - name: Build and push frontend
         uses: docker/build-push-action@v4
