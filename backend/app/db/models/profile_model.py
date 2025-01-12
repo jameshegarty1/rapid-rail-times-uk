@@ -11,6 +11,7 @@ class Profile(Base):
     origins = Column(String)
     destinations = Column(String)
     user = relationship("User", back_populates="profiles")
+    favourite = Column(Boolean)
 
     @property
     def origins_list(self):
@@ -50,4 +51,5 @@ class Profile(Base):
             "user_id": self.user_id,
             "origins": self.origins_list,
             "destinations": self.destinations_list,
+            "favourite": self.favourite,
         }

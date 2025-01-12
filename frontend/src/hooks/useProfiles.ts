@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   fetchProfiles,
-  fetchTrains,
   createProfile,
   updateProfile,
   deleteProfile,
+  setFavouriteProfile,
+  unsetFavouriteProfile,
 } from '../utils/api';
 import { Train, Profile } from '../utils/interfaces';
 import useTrains from './useTrains';
@@ -32,9 +33,10 @@ interface UseProfilesReturn {
     profileId: number,
     forceFetch?: boolean
   ) => Promise<void>;
+  handleFavouriteProfile: (id: number, is_set: boolean) => Promise<void>;
   lastFetchTime: { [profileId: number]: Date | null };
-  favoriteProfileId: number | null;
-  setFavoriteProfileId: (id: number | null) => void;
+  favouriteProfileId: number | null;
+  setFavouriteProfileId: (id: number | null) => void;
 }
 
 export default function useProfiles(): UseProfilesReturn {
@@ -44,7 +46,7 @@ export default function useProfiles(): UseProfilesReturn {
   const [expandedProfileId, setExpandedProfileId] = useState<number | null>(
     null
   );
-  const [favoriteProfileId, setFavoriteProfileId] = useState<number | null>(
+  const [favouriteProfileId, setFavouriteProfileId] = useState<number | null>(
     null
   );
 
@@ -62,15 +64,17 @@ export default function useProfiles(): UseProfilesReturn {
       setError(null);
       try {
         const data = await fetchProfiles();
+        console.log('Profiles before setting state:', data);
         setProfiles(data);
+        console.log('Profiles after setting state:', data.map(p => ({...p})));
 
-        // If we have a stored favorite ID, validate it still exists
-        if (
-          favoriteProfileId &&
-          !data.find((p) => p.id === favoriteProfileId)
-        ) {
-          setFavoriteProfileId(null);
+        const favouriteProfile = data.find(p => p.favourite);
+        console.log('Found favourite profile:', favouriteProfile);
+
+        if (favouriteProfile) {
+          setFavouriteProfileId(favouriteProfile.id);
         }
+
       } catch (error) {
         setError('Error fetching profiles');
       } finally {
@@ -124,11 +128,62 @@ export default function useProfiles(): UseProfilesReturn {
     try {
       await deleteProfile(id);
       setProfiles(profiles.filter((profile) => profile.id !== id));
-      if (favoriteProfileId === id) {
-        setFavoriteProfileId(null);
+      if (favouriteProfileId === id) {
+        setFavouriteProfileId(null);
       }
     } catch (error) {
       setError('Error deleting profile');
+    } finally {
+      setLoading((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleFavouriteProfile = async (
+    id: number,
+    is_set: boolean = false
+  ) => {
+    setLoading((prev) => ({ ...prev, [id]: true }));
+    setError(null);
+
+    setProfiles(prevProfiles =>
+        prevProfiles.map(profile => ({
+          ...profile,
+          favourite: profile.id === id ? is_set : false
+        }))
+    );
+    setFavouriteProfileId(is_set ? id : null);
+
+    try {
+      const success = is_set
+        ? await setFavouriteProfile(id)
+        : await unsetFavouriteProfile(id);
+
+      if (!success) {
+        // Revert the UI state if the API call failed
+        setProfiles(prevProfiles =>
+            prevProfiles.map(profile => ({
+              ...profile,
+              favourite: profile.id === id ? !is_set : false
+            }))
+        );
+        setFavouriteProfileId(is_set ? null : id);
+      }
+
+    } catch (error) {
+      // Revert the UI state on error
+      setProfiles(prevProfiles =>
+          prevProfiles.map(profile => ({
+            ...profile,
+            favourite: profile.id === id ? !is_set : false
+          }))
+      );
+      setFavouriteProfileId(is_set ? null : id);
+
+      setError(
+          error instanceof Error
+              ? error.message
+              : 'Error setting favourite profile'
+      );
     } finally {
       setLoading((prev) => ({ ...prev, [id]: false }));
     }
@@ -165,10 +220,11 @@ export default function useProfiles(): UseProfilesReturn {
     handleUpdateProfile,
     handleDeleteProfile,
     handleFetchTrains,
+    handleFavouriteProfile,
     lastFetchTime,
     expandedProfileId,
     setExpandedProfileId,
-    favoriteProfileId,
-    setFavoriteProfileId,
+    favouriteProfileId,
+    setFavouriteProfileId,
   };
 }

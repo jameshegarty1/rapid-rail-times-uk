@@ -4,12 +4,13 @@ from typing import List
 class ProfileBase(BaseModel):
     origins: List[str]
     destinations: List[str]
+    favourite: bool
 
 class ProfileCreate(ProfileBase):
-    pass
+    favourite: bool = False
 
 class ProfileUpdate(ProfileBase):
-    pass
+    favourite: bool
 
 class Profile(ProfileBase):
     id: int

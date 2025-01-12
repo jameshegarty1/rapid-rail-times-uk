@@ -1,4 +1,4 @@
-import React  from 'react';
+import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { Watch } from 'react-loader-spinner';
 import TrainList from './TrainList';
 import { Train } from '../utils/interfaces';
 import stationData from '../config/stations.json';
-import {getTimeFromString} from '../lib/utils';
+import { getTimeFromString } from '../lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const createAlphaToNameMap = (stations: { ALPHA: string; NAME: string }[]) => {
   const map: { [key: string]: string } = {};
@@ -36,8 +37,8 @@ interface ProfileCardProps {
   trains?: Train[];
   lastFetchTime?: Date | null;
   loading: boolean;
-  isFavorite: boolean;
-  onFavoriteToggle: () => void;
+  isFavourite: boolean;
+  onFavouriteToggle: () => void;
 }
 
 export default function ProfileCard({
@@ -53,8 +54,8 @@ export default function ProfileCard({
   trains = [],
   lastFetchTime,
   loading,
-  isFavorite,
-  onFavoriteToggle,
+  isFavourite,
+  onFavouriteToggle,
 }: ProfileCardProps) {
   const handleToggleExpand = () => {
     onExpand();
@@ -67,10 +68,10 @@ export default function ProfileCard({
     if (!trains.length) return null;
 
     const now = new Date().getTime(); // Get timestamp once
-    console.log("Now: ", now.toString());
+    //console.log('Now: ', now.toString());
 
-    // Find next train in a single pass through the array
     const nextTrain = trains.reduce((nearest: Train, train: Train) => {
+      // Iterate over trains list, find the next train
       // Skip cancelled trains
       if (train.is_cancelled) return nearest;
 
@@ -81,7 +82,7 @@ export default function ProfileCard({
           : getTimeFromString(train.estimated_departure)
       ).getTime();
 
-      console.log("DepTime: ", departureTime.toString());
+      //console.log('DepTime: ', departureTime.toString());
 
       // Skip trains that have already departed
       if (departureTime < now) return nearest;
@@ -107,17 +108,15 @@ export default function ProfileCard({
     let nextTrainTime: number | null;
 
     if (nextTrain.estimated_departure === 'On time') {
-      nextTrainTime = getTimeFromString(nextTrain.scheduled_departure)
+      nextTrainTime = getTimeFromString(nextTrain.scheduled_departure);
     } else {
-      nextTrainTime = getTimeFromString(nextTrain.estimated_departure)
+      nextTrainTime = getTimeFromString(nextTrain.estimated_departure);
     }
 
-    return formatDistanceToNow(nextTrainTime)
-    };
+    return formatDistanceToNow(nextTrainTime);
+  };
 
   const nextTrainTime = getNextTrain();
-
-
 
   return (
     <Card
@@ -129,35 +128,82 @@ export default function ProfileCard({
       }}
     >
       <CardContent className="p-4 sm:p-6">
-        <div className="space-y-4 sm:space-y-6">
-          {/* Header with Favorite Button */}
+        <div className="space-y-3 sm:space-y-6">
+          {/* Header with Buttons to interact with profile */}
           <div className="flex items-start justify-between">
             <Button
               variant="ghost"
               size="sm"
               className={`-mt-1 -ml-2 p-2 ${
-                isFavorite ? 'text-yellow-500' : 'text-gray-400'
+                isFavourite ? 'text-yellow-500' : 'text-gray-400'
               }`}
               onClick={(e) => {
                 e.stopPropagation();
-                onFavoriteToggle();
+                onFavouriteToggle();
               }}
             >
               <Star
                 className="h-5 w-5"
-                fill={isFavorite ? 'currentColor' : 'none'}
+                fill={isFavourite ? 'currentColor' : 'none'}
               />
             </Button>
+
+            {/* Next Train Info for Favourite */}
+            {isFavourite && nextTrainTime && !loading && (
+              <Badge variant="secondary"className="text-xs sm:text-sm font-medium">
+                Next train {nextTrainTime}
+              </Badge>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="p-2 sm:p-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              >
+                <Edit2 className="h-4 w-4 " />
+                {/*Edit*/}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-2 sm:p-3  text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+                {/*Delete*/}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="p-2 sm:p-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefresh();
+                }}
+              >
+                <RefreshCcw className="h-4 w-4" />
+                {/*Refresh*/}
+              </Button>
+            </div>
           </div>
           {/* Route Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
             {/* From Section */}
             <div className="space-y-2 sm:space-y-3">
-              <div className="flex items-center space-x-2 text-gray-500 text-smi sm:text-base">
+              <div className="flex items-center gap-2 space-x-2 text-gray-500 text-smi sm:text-base">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span>From</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {origins.map((origin, index) => (
                   <div key={index} className="pl-4 sm:pl-6">
                     <div className="text-sm sm:text-base">
@@ -172,7 +218,7 @@ export default function ProfileCard({
             </div>
 
             <div className="space-y-2 sm:space-y-3">
-              <div className="flex items-center space-x-2 text-gray-500 text-sm sm:text-base">
+              <div className="flex items-center space-x-2 gap-2 text-gray-500 text-sm sm:text-base">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span>To</span>
               </div>
@@ -189,53 +235,6 @@ export default function ProfileCard({
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Next Train Info for Favorite */}
-          {isFavorite && nextTrainTime && !loading && (
-            <div className="text-sm sm:text-base text-gray-600 font-medium">
-              Next train {nextTrainTime}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 scale-120">
-            <Button
-              variant="outline"
-              size="sm"
-              className="p-2 sm:p-3"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-            >
-              <Edit2 className="h-4 w-4 " />
-              {/*Edit*/}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-2 sm:p-3  text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-              {/*Delete*/}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="p-2 sm:p-3"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRefresh();
-              }}
-            >
-              <RefreshCcw className="h-4 w-4" />
-              {/*Refresh*/}
-            </Button>
           </div>
 
           {/* Expanded Content */}
