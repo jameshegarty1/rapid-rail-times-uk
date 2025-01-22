@@ -5,8 +5,9 @@ export interface Train {
   platform: string;
   origin: string;
   destination: string;
+  destination_name: string;
   via: string;
-  length: number;
+  coaches: number;
   operator: string;
   is_cancelled: boolean;
   delay_reason?: string;
@@ -24,10 +25,8 @@ export interface Profile {
 
 export interface CallingPoint {
   crs: string;
-  location_name: string;
-  st: string; // scheduled time
-  et: string; // estimated time
-  at: string; // actual time
+  station_name: string;
+  scheduled_time: string; // scheduled time
 }
 
 

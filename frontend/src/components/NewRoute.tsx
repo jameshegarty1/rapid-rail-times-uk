@@ -67,7 +67,7 @@ export default function NewRouteFAB({
       // Reset form when closing
       setOrigins([]);
       setDestinations([]);
-      setIsSaveMode(false);
+      setIsSaveMode(true);
       setIsFormCollapsed(false);
     }
   }, [initialProfile, isEditing, isOpen]);
@@ -210,25 +210,25 @@ export default function NewRouteFAB({
                     <div className="flex items-center gap-2 sm:gap-6 rounded-lg bg-muted p-1.5 sm:p-2 text-sm w-full">
                       <button
                           className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-md transition-colors flex-1 ${
-                              !isSaveMode
-                                  ? 'bg-background text-foreground shadow-sm'
-                                  : 'text-muted-foreground'
-                          }`}
-                          onClick={() => setIsSaveMode(false)}
-                      >
-                        <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        <span className="font-medium">Quick Search</span>
-                      </button>
-                      <button
-                          className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-md transition-colors flex-1 ${
                               isSaveMode
                                   ? 'bg-background text-foreground shadow-sm'
                                   : 'text-muted-foreground'
                           }`}
                           onClick={() => setIsSaveMode(true)}
                       >
-                        <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4"/>
                         <span className="font-medium">Save Route</span>
+                      </button>
+                      <button
+                          className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-md transition-colors flex-1 ${
+                              !isSaveMode
+                                  ? 'bg-background text-foreground shadow-sm'
+                                  : 'text-muted-foreground'
+                          }`}
+                          onClick={() => setIsSaveMode(false)}
+                      >
+                        <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4"/>
+                        <span className="font-medium">Quick Search</span>
                       </button>
                     </div>
                 )}
