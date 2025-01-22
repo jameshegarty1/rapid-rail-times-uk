@@ -1,26 +1,366 @@
-from loguru import logger
-from typing import List
-from zeep import Client, Settings, xsd
-from zeep.plugins import HistoryPlugin
+# app/services/train_service.py
 from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional
+import time
 import pytz
-import json
+import logging
+import requests
+import structlog
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
+from zeep import Client, Settings, xsd, Transport
+from zeep.plugins import HistoryPlugin
+from app.db.models.train_model import KnownService
+from app.db.crud.train_crud import (
+    get_services_for_origin,
+    create_or_update_service,
+)
 import os
-from app.exceptions import TrainServiceException
-from app.services.cache_service import CacheService
+log = structlog.get_logger("service.train")
 
-LDB_TOKEN = os.getenv('LDB_TOKEN')
-WSDL = os.getenv('WSDL')
+class TrainService:
+    def __init__(self, db: Session, soap_client: Client):
+        self.db = db
+        self.soap_client = soap_client
+        self.london_tz = pytz.timezone('Europe/London')
+
+    @staticmethod
+    def _generate_service_id(origin: str, destination: str, departure_time: str) -> str:
+        return f"{origin}-{destination}-{departure_time.replace(':', '')}"
+
+    @staticmethod
+    def _service_serves_destinations(service: KnownService, destinations: List[str]) -> bool:
+        service_stops = {cp["crs"] for cp in service.calling_points}
+        return bool(service_stops & set(destinations))
+
+    @staticmethod
+    def _get_latest_time(services: List[Any]) -> Optional[str]:
+        try:
+            return max(s.std for s in services) if services else None
+        except Exception as e:
+            log.error("Error getting latest time", error=str(e))
+            return None
+
+    def get_train_routes(self, origins: List[str], destinations: List[str], force_fetch: bool = False) -> List[dict]:
+        """Get train routes between origins and destinations."""
+        now = datetime.now(self.london_tz)
+        start_time = time.time()
+        result_services = []
+
+        log.info(
+            "train.routes.fetch.start",
+            origins=origins,
+            destinations=destinations,
+            force_fetch=force_fetch
+        )
+
+        for origin in origins:
+            origin_start = time.time()
+            # Get latest departure board always
+            departures = self._get_departure_board(origin)
+            if not departures:
+                continue
+
+            log.info(
+                "train.departures.fetched",
+                origin=origin,
+                count=len(departures),
+                elapsed_ms=int((time.time() - origin_start) * 1000)
+            )
+
+            # Get known services for this origin
+            db_start = time.time()
+            known_services = [] if force_fetch else get_services_for_origin(
+                self.db,
+                origin=origin,
+                current_time=now,
+                window_minutes=60
+            )
+            log.info(
+                "train.db.fetch",
+                origin=origin,
+                cached_services=len(known_services),
+                elapsed_ms=int((time.time() - db_start) * 1000)
+            )
+
+            known_service_map = {
+                self._generate_service_id(s.origin, s.destination, s.scheduled_departure): s
+                for s in known_services
+            }
+
+            services_to_fetch = []
+            for departure in departures:
+                service_id = self._generate_service_id(
+                    origin,
+                    departure['destination'],
+                    departure['std']
+                )
+
+                if service_id in known_service_map and not force_fetch:
+                    # We have cached data for this service
+                    known_service = known_service_map[service_id]
+                    if self._service_serves_destinations(known_service, destinations):
+                        service_dict = known_service.to_dict()
+                        service_dict.update({
+                            'estimated_departure': departure['etd'],
+                            'platform': departure['platform'],
+                            'is_cancelled': departure['is_cancelled'],
+                            'delay_reason': departure['delay_reason'],
+                            'cancel_reason': departure['cancel_reason'],
+                            'coaches': departure['length'],
+                        })
+                        result_services.append(service_dict)
+                else:
+                    services_to_fetch.append(departure)
+
+            if services_to_fetch:
+                log.info(
+                    "train.details.needed",
+                    origin=origin,
+                    services_to_fetch=len(services_to_fetch),
+                    force_fetch=force_fetch
+                )
+                for i in range(0, len(services_to_fetch), 10):
+                    batch = services_to_fetch[i:i + 10]
+                    first_departure = batch[0]['std']
+
+                    details_start = time.time()
+
+                    details = self._get_departure_board_with_details(
+                        origin,
+                        time_offset=self._calculate_offset(first_departure),
+                        time_window=30  # Small window to catch this batch
+                    )
+
+                    details_duration = int((time.time() - details_start) * 1000)
+
+                    log.info(
+                        "train.details.fetched",
+                        origin=origin,
+                        batch_start=i,
+                        batch_size=len(batch),
+                        details_found=len(details),
+                        elapsed_ms=details_duration
+                    )
+
+                    for detail in details:
+                        # Store in DB
+                        service = create_or_update_service(
+                            self.db,
+                            service_id=self._generate_service_id(
+                                origin,
+                                detail['destination'],
+                                detail['scheduled_departure']
+                            ),
+                            origin=origin,
+                            destination=detail['destination'],
+                            destination_name=detail['destination_name'],
+                            scheduled_departure=detail['scheduled_departure'],
+                            calling_points=detail['calling_points'],
+                            operator=detail['operator']
+                        )
+
+                        if self._service_serves_destinations(service, destinations):
+                            # Find matching real-time data
+                            departure = next(
+                                (d for d in batch
+                                 if d['std'] == detail['scheduled_departure'] and
+                                 d['destination'] == detail['destination']),
+                                None
+                            )
+                            log.info(batch, detail)
+                            if departure:
+                                service_dict = service.to_dict()
+                                service_dict.update({
+                                    'estimated_departure': departure['etd'],
+                                    'platform': departure['platform'],
+                                    'is_cancelled': departure['is_cancelled'],
+                                    'delay_reason': departure['delay_reason'],
+                                    'cancel_reason': departure['cancel_reason'],
+                                    'coaches': departure['length'],
+                                })
+                                result_services.append(service_dict)
+
+            total_duration = int((time.time() - start_time) * 1000)
+            log.info(
+                "train.routes.fetch.complete",
+                origins=origins,
+                services_found=len(result_services),
+                total_elapsed_ms=total_duration
+            )
+            return sorted(result_services, key=lambda x: x['scheduled_departure'])
 
 
-cache_service = CacheService()
+    def _get_departure_board(self, origin: str) -> List[dict]:
+        """Get real-time data with fast endpoint."""
+        start_time = time.time()
+        log.info("train.board.fetch.start", origin=origin)
+        response = self.soap_client.service.GetDepartureBoard(
+            numRows=150,
+            crs=origin,
+            timeOffset=0,
+            timeWindow=60
+        )
+        elapsed_ms = int((time.time() - start_time) * 1000)
 
 
-def create_soap_client(wsdl: str, token: str) -> Client:
-    settings = Settings(strict=False)
+        if not response or not response.trainServices:
+            log.warning(
+                "train.board.empty",
+                origin=origin,
+                elapsed_ms=elapsed_ms
+            )
+            return []
+
+        services = [
+            {
+                'destination': s.destination.location[0].crs,
+                'destination_name': s.destination.location[0].locationName,
+                'std': s.std,
+                'etd': s.etd,
+                'platform': getattr(s, 'platform', None),
+                'is_cancelled': getattr(s, 'isCancelled', False),
+                'delay_reason': getattr(s, 'delayReason', None),
+                'cancel_reason': getattr(s, 'cancelReason', None),
+                'length': getattr(s, 'length', None)
+            }
+            for s in response.trainServices.service
+        ]
+
+        log.info(
+            "train.board.fetch.success",
+            origin=origin,
+            services_found=len(services),
+            elapsed_ms=elapsed_ms
+        )
+
+        return services
+
+    def _get_departure_board_with_details(self, origin: str, time_offset: int, time_window: int) -> List[dict]:
+        """Get calling points data with detailed endpoint."""
+        start_time = time.time()
+        log.info(
+            "train.details.fetch.start",
+            origin=origin,
+            time_offset=time_offset,
+            time_window=time_window
+        )
+
+        response = self.soap_client.service.GetDepBoardWithDetails(
+            numRows=10,
+            crs=origin,
+            timeOffset=time_offset,
+            timeWindow=time_window
+        )
+
+        elapsed_ms = int((time.time() - start_time) * 1000)
+
+        if not response or not response.trainServices:
+            log.warning(
+                "train.details.empty",
+                origin=origin,
+                time_offset=time_offset,
+                elapsed_ms=elapsed_ms
+            )
+            return []
+
+        services = [
+            {
+                'destination': s.destination.location[0].crs,
+                'destination_name': s.destination.location[0].locationName,
+                'scheduled_departure': s.std,
+                'operator': s.operator,
+                'calling_points': [
+                    {
+                        'crs': p.crs,
+                        'station_name': p.locationName,
+                        'scheduled_time': p.st
+                    }
+                    for p in s.subsequentCallingPoints.callingPointList[0].callingPoint
+                ]
+            }
+            for s in response.trainServices.service
+        ]
+
+        log.info(
+            "train.details.fetch.success",
+            origin=origin,
+            time_offset=time_offset,
+            services_found=len(services),
+            elapsed_ms=elapsed_ms
+        )
+
+        return services
+
+    def _calculate_offset(self, target_time: str) -> int:
+        """Calculate minutes offset needed to include target time."""
+        now = datetime.now(self.london_tz)
+        current_time = now.strftime("%H:%M")
+
+        # Convert both to minutes since midnight
+        current_mins = int(current_time.split(":")[0]) * 60 + int(current_time.split(":")[1])
+        target_mins = int(target_time.split(":")[0]) * 60 + int(target_time.split(":")[1])
+
+        # Calculate difference
+        diff = target_mins - current_mins
+        return max(0, diff)
+
+
+    def _store_service(self, service: Any) -> Optional[KnownService]:
+        """Store a service in the database."""
+        try:
+            calling_points = [
+                {
+                    "crs": point.crs,
+                    "location_name": point.locationName,
+                    "st": point.st
+                }
+                for point in service.subsequentCallingPoints.callingPointList[0].callingPoint
+            ]
+
+            origin = service.origin.location[0].crs
+            destination = service.destination.location[0].crs
+            departure_time = service.std
+
+            service_id = self._generate_service_id(origin, destination, departure_time)
+
+            return create_or_update_service(
+                self.db,
+                service_id=service_id,
+                origin=origin,
+                destination=destination,
+                scheduled_departure=service.std,
+                calling_points=calling_points,
+                operator=service.operator,
+            )
+        except Exception as e:
+            log.error("Error storing service", error=str(e), service_id=service.serviceID)
+            return None
+
+
+def create_train_service(db: Session) -> TrainService:
+    """Create and configure train service instance with controlled logging."""
+    # Configure Zeep logging
+    zeep_logger = logging.getLogger('zeep')
+    zeep_logger.setLevel(logging.WARNING)  # Only show warnings and errors
+
+    # Configure transport with timeout
+    session = requests.Session()
+    session.verify = True
+    transport = Transport(session=session, timeout=10)
+
+    # Configure Zeep settings
+    settings = Settings(strict=False, xml_huge_tree=True)
     history = HistoryPlugin()
-    client = Client(wsdl=wsdl, settings=settings, plugins=[history])
 
+    client = Client(
+        wsdl=os.getenv('WSDL'),
+        settings=settings,
+        transport=transport,
+        plugins=[history]
+    )
+
+    # Add authentication header
     header = xsd.Element(
         '{http://thalesgroup.com/RTTI/2013-11-28/Token/types}AccessToken',
         xsd.ComplexType([
@@ -29,150 +369,7 @@ def create_soap_client(wsdl: str, token: str) -> Client:
                 xsd.String()),
         ])
     )
-    header_value = header(TokenValue=token)
+    header_value = header(TokenValue=os.getenv('LDB_TOKEN'))
     client.set_default_soapheaders([header_value])
 
-    return client
-
-def get_train_routes(origins: List[str], destinations: List[str], forceFetch: bool) -> List[dict]:
-    logger.info(f"Fetching train routes for {origins} to {destinations} with forceFetch={forceFetch}")
-    cache_key = f"train_routes:{'-'.join(origins)}:{'-'.join(destinations)}"
-
-    if not forceFetch:
-        cached_data = cache_service.get(cache_key)
-        if cached_data:
-            logger.info("Returning cached data:")
-
-            return cached_data
-
-    client = create_soap_client(WSDL, LDB_TOKEN)
-    london_tz = pytz.timezone('Europe/London')
-
-    logger.info("in get_train_routes")
-
-    total_time_window = 60
-    train_info_arr = []
-    train_service_ids = []
-
-    for origin in origins:
-        time_offset = 0
-        remaining_time_window = total_time_window
-        while remaining_time_window > 0:
-            try:
-                response = client.service.GetDepBoardWithDetails(numRows=10,crs=origin,timeOffset=time_offset)
-                if response.trainServices is None:
-                    raise TrainServiceException(status_code=404, detail="No train services found")
-
-                services = response.trainServices.service
-                logger.info(f"Trains from {response.locationName}")
-
-                latest_departure_time = None
-
-                for service in services:
-                    train_data = {
-                        "service_id": service.serviceID,
-                        "scheduled_departure": service.std,
-                        "estimated_departure": service.etd,
-                        "platform": service.platform,
-                        "origin": origin,
-                        "destination": service.destination.location[0].locationName,
-                        "via": service.destination.location[0].via,
-                        "length": service.length,
-                        "operator": service.operator,
-                        "is_cancelled": service.isCancelled,
-                        "delay_reason": service.delayReason,
-                        "cancel_reason": service.cancelReason,
-                        "subsequent_calling_points": serialize_calling_points(service.subsequentCallingPoints.callingPointList)
-                    }
-
-                    now_utc = datetime.now(pytz.utc)
-                    now = now_utc.astimezone(london_tz)
-                    today = now.date()
-                    scheduled_time_naive = datetime.combine(today, datetime.strptime(train_data['scheduled_departure'], '%H:%M').time())
-                    scheduled_time = london_tz.localize(scheduled_time_naive)
-                    estimated_time = None
-
-                    if train_data['estimated_departure'] != 'On time':
-                        try:
-                            estimated_time = datetime.combine(today, datetime.strptime(train_data['estimated_departure'], '%H:%M').time())
-                            estimated_time = estimated_time.astimezone(london_tz)
-                            logger.info(f"Set estimated time to {estimated_time}")
-                        except ValueError:
-                            estimated_time = scheduled_time
-                    else:
-                        estimated_time = scheduled_time
-
-                    if estimated_time and estimated_time < scheduled_time:
-                        estimated_time += timedelta(days=1)
-
-                    #if scheduled_time < now:
-                        #scheduled_time += timedelta(days=1)
-
-                    logger.info(f"Now: {now}")
-                    logger.info(f"Scheduled Departure time: {scheduled_time}")
-                    logger.info(f"Estimated Departure time: {estimated_time}")
-                    logger.info(f"Service {train_data['service_id']} actual departure at {estimated_time.strftime('%Y-%m-%d %H:%M:%S')}")
-
-                    if latest_departure_time is None or scheduled_time > latest_departure_time:
-                        latest_departure_time = scheduled_time
-                        logger.info(f"New latest departure time: {latest_departure_time}")
- 
-                    if filter_trains_by_destinations(train_data, destinations):
-                        logger.info(f"Train with ID {train_data['service_id']} calls at one of our destinations!")
-                        if train_data['service_id'] not in train_service_ids:
-                            train_info_arr.append(train_data)
-                            train_service_ids.append(train_data['service_id'])
-
-                if latest_departure_time:
-                    now_utc = datetime.now(pytz.utc)
-                    logger.info(f"Time now UTC: {now_utc}")
-                    now = now_utc.astimezone(london_tz)
-                    logger.info(f"Time now: {now}")
-                    logger.info(f"Latest dep. time in last batch: {latest_departure_time}")
-                    time_offset = int((latest_departure_time - now).total_seconds() / 60)
-                    if time_offset < 0:
-                        time_offset = 0
-                    logger.info(f"Time offset = {time_offset}")
-
-                remaining_time_window -= time_offset
-                logger.info(f"Remaining time to search: {remaining_time_window}")
- 
-            except Exception as e:
-                logger.error(f"Error fetching train routes: {e}")
-                raise TrainServiceException(status_code=500, detail="Failed to fetch train routes")
-
-    # sort
-    sort_trains(train_info_arr)
-
-    # cache
-    cache_service.setex(cache_key, timedelta(minutes=2), json.dumps(train_info_arr))
-    logger.info("Data cached")
-
-    return train_info_arr
-
-
-def filter_trains_by_destinations(train_data, destinations):
-    destination_set = set(destinations)
-    matches = False
-    points_crs = [point['crs'] for point in train_data['subsequent_calling_points']]
-
-    for dest in destination_set:
-        logger.info(f"Checking for destination {dest} in calling points: {points_crs}")
-        if dest in points_crs:
-            matches = True
-
-    return matches
-
-def serialize_calling_points(calling_points):
-    logger.info("Attempting serialization...")
-    serialized = []
-    for point in calling_points[0]['callingPoint']:
-        serialized.append({'crs': point['crs'], 'location_name': point['locationName'], 'st': point['st'], 'et': point['et'], 'at': point['at']})
-    return serialized
-
-
-def sort_trains(trains):
-    # Sort the train_info_arr by scheduled_departure
-    trains.sort(key=lambda x: datetime.strptime(x['scheduled_departure'], '%H:%M'))
-
-
+    return TrainService(db=db, soap_client=client)

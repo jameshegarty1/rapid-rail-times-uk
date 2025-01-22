@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.10-slim
 
 RUN mkdir /app
 WORKDIR /app
@@ -23,4 +23,4 @@ ARG LDB_TOKEN
 ENV WSDL=$WSDL
 ENV LDB_TOKEN=$LDB_TOKEN
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8080"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8080 --log-level debug"]

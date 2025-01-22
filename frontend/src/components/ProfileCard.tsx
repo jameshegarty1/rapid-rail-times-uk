@@ -67,47 +67,60 @@ export default function ProfileCard({
   const getNextTrain = () => {
     if (!trains.length) return null;
 
-    const now = new Date().getTime(); // Get timestamp once
-    //console.log('Now: ', now.toString());
+    const now = new Date().getTime();
 
-    const nextTrain = trains.reduce((nearest: Train, train: Train) => {
-      // Iterate over trains list, find the next train
+    const nextTrain = trains.reduce((nearest: Train | null, train: Train) => {
       // Skip cancelled trains
       if (train.is_cancelled) return nearest;
 
-      // Get departure time once
-      const departureTime = new Date(
-        train.estimated_departure === 'On time'
-          ? getTimeFromString(train.scheduled_departure)
-          : getTimeFromString(train.estimated_departure)
-      ).getTime();
+      // Get actual departure time based on status
+      let departureTime: number;
 
-      //console.log('DepTime: ', departureTime.toString());
+      if (train.estimated_departure === 'On time') {
+        departureTime = getTimeFromString(train.scheduled_departure);
+      } else if (
+        train.estimated_departure === 'Delayed' ||
+        train.estimated_departure === 'Cancelled'
+      ) {
+        // For delayed trains with no specific time, use scheduled time as estimate
+        departureTime = getTimeFromString(train.scheduled_departure);
+      } else {
+        // For trains with specific estimated time
+        departureTime = getTimeFromString(train.estimated_departure);
+      }
 
       // Skip trains that have already departed
       if (departureTime < now) return nearest;
 
-      // If no nearest train yet, or this train is sooner
-      if (
-        !nearest ||
-        departureTime <
-          new Date(
-            nearest.estimated_departure === 'On time'
-              ? getTimeFromString(nearest.scheduled_departure)
-              : getTimeFromString(nearest.estimated_departure)
-          ).getTime()
+      // If no nearest train yet, use this one
+      if (!nearest) return train;
+
+      // Get departure time for current nearest train
+      let nearestDepartureTime: number;
+      if (nearest.estimated_departure === 'On time') {
+        nearestDepartureTime = getTimeFromString(nearest.scheduled_departure);
+      } else if (
+        nearest.estimated_departure === 'Delayed' ||
+        nearest.estimated_departure === 'Cancelled'
       ) {
-        return train;
+        nearestDepartureTime = getTimeFromString(nearest.scheduled_departure);
+      } else {
+        nearestDepartureTime = getTimeFromString(nearest.estimated_departure);
       }
 
-      return nearest;
-    });
+      // Return the earlier train
+      return departureTime < nearestDepartureTime ? train : nearest;
+    }, null);
 
     if (!nextTrain) return null;
 
-    let nextTrainTime: number | null;
-
-    if (nextTrain.estimated_departure === 'On time') {
+    // Get final departure time for display
+    let nextTrainTime: number;
+    if (
+      nextTrain.estimated_departure === 'On time' ||
+      nextTrain.estimated_departure === 'Delayed' ||
+      nextTrain.estimated_departure === 'Cancelled'
+    ) {
       nextTrainTime = getTimeFromString(nextTrain.scheduled_departure);
     } else {
       nextTrainTime = getTimeFromString(nextTrain.estimated_departure);
@@ -150,7 +163,10 @@ export default function ProfileCard({
 
             {/* Next Train Info for Favourite */}
             {isFavourite && nextTrainTime && !loading && (
-              <Badge variant="secondary"className="text-xs sm:text-sm font-medium">
+              <Badge
+                variant="secondary"
+                className="text-xs sm:text-sm font-medium"
+              >
                 Next train {nextTrainTime}
               </Badge>
             )}

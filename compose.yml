@@ -38,6 +38,7 @@ services:
       DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/postgres'
       WSDL: ${WSDL}
       LDB_TOKEN: ${LDB_TOKEN}
+      ENVIRONMENT: development
     depends_on:
       - "postgres"
 
