@@ -188,7 +188,8 @@ class TrainService:
                 services_found=len(result_services),
                 total_elapsed_ms=total_duration
             )
-            return sorted(result_services, key=lambda x: x['scheduled_departure'])
+
+        return sorted(result_services, key=lambda x: x['scheduled_departure'])
 
 
     def _get_departure_board(self, origin: str) -> List[dict]:
