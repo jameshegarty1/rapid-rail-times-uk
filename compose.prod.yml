@@ -15,7 +15,7 @@ services:
       - VITE_API_URL=${VITE_API_URL}
 
   postgres:
-    image: postgres:15-alpine
+    image: docker.io/postgres:15-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
