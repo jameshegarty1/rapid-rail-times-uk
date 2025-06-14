@@ -1,5 +1,5 @@
 # Stage 1: Build the React app
-FROM node:16 AS build
+FROM node:18 AS build
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci --only=production
 
 # Copy the rest of the application code
 COPY . .
@@ -26,12 +26,22 @@ RUN npm run build
 # Stage 2: Serve the React app using Nginx
 FROM nginx:alpine
 
-COPY --from=build /app/dist /usr/share/nginx/html
-
 COPY nginx/default.conf.prod /etc/nginx/conf.d/default.conf
 
+COPY --from=build /app/dist /usr/share/nginx/html
+
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d
+
+USER nginx
 
 # Expose the dynamic port
 EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
 CMD ["sh", "-c", "nginx -g 'daemon off;'"]
