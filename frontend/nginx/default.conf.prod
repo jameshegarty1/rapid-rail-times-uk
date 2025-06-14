@@ -9,11 +9,12 @@ upstream backend {
 # Rate limiting
 limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
 limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;
+limit_req_zone $binary_remote_addr zone=global:10m rate=100r/s;
 
 server {
-    listen 8080;  # Changed from 80 to 8080 to match container setup
-    server_name _;
-    
+     listen 80;
+    server_name rail-times-uk.com www.rail-times-uk.com _;    
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -45,7 +46,8 @@ server {
     # API endpoints with rate limiting - BEFORE the main location block
     location /api/ {
         limit_req zone=api burst=20 nodelay;
-        proxy_pass http://backend/;
+
+        proxy_pass http://host.containers.internal:8081/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -65,7 +67,7 @@ server {
     # Login endpoints with stricter rate limiting
     location /api/auth/login {
         limit_req zone=login burst=5 nodelay;
-        proxy_pass http://backend/api/auth/login;
+        proxy_pass http://host.containers.internal:8081/api/auth/login;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -74,6 +76,95 @@ server {
     
     # Serve React build files - THIS MUST BE LAST
     location / {
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
+        
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+        
+        # Don't cache index.html
+        location = /index.html {
+            expires -1;
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+        }
+    }
+}
+
+# HTTPS Server (enable when you have SSL certificates)
+server {
+    listen 443 ssl http2;
+    server_name rail-times-uk.com www.rail-times-uk.com _;
+    
+    # SSL certificate paths (mount these as volumes)
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    
+    # Modern SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" always;
+    
+    # Hide nginx version
+    server_tokens off;
+    
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    
+    # Health check endpoint
+    location /nginx-health {
+        access_log off;
+        return 200 "nginx healthy\n";
+        add_header Content-Type text/plain;
+    }
+    
+    # API endpoints with rate limiting
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        
+        proxy_pass http://host.containers.internal:8081/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Timeouts
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+    
+    # Login endpoints with stricter rate limiting
+    location /api/auth/login {
+        limit_req zone=login burst=5 nodelay;
+        
+        proxy_pass http://host.containers.internal:8081/api/auth/login;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # Serve React build files
+    location / {
+        limit_req zone=global burst=200 nodelay;
+        
         root /usr/share/nginx/html;
         index index.html index.htm;
         try_files $uri $uri/ /index.html;
