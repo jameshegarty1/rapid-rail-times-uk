@@ -53,6 +53,7 @@ jobs:
           context: ./frontend
           push: true
           platforms: linux/amd64
+          no-cache: true
           tags: ${{ env.DOCKERHUB_USERNAME }}/${{ secrets.FRONTEND_REPO_NAME }}:v${{ env.VERSION }}
           build-args: |
             VITE_API_URL=${{ secrets.VITE_API_URL }}

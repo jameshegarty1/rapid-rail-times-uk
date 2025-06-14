@@ -17,7 +17,7 @@ fi
 source .env
 
 # Validate required environment variables
-required_vars=("DOCKERHUB_USERNAME" "FRONTEND_REPO_NAME" "BACKEND_REPO_NAME" "VERSION" "POSTGRES_PASSWORD")
+required_vars=("DOCKERHUB_USER" "FRONTEND_REPO_NAME" "BACKEND_REPO_NAME" "VERSION" "POSTGRES_PASSWORD")
 for var in "${required_vars[@]}"; do
     if [ -z "${!var}" ]; then
         echo "❌ Error: $var is not set in .env file"
@@ -35,18 +35,18 @@ chmod 600 .env
 chmod +x deploy.sh
 
 # Login to DockerHub (optional, for private repos)
-if [ ! -z "${DOCKERHUB_TOKEN}" ]; then
+if [ ! -z "${DOCKERHUB_PAT}" ]; then
     echo "🔑 Logging in to DockerHub..."
-    echo "${DOCKERHUB_TOKEN}" | podman login docker.io --username "${DOCKERHUB_USERNAME}" --password-stdin
+    echo "${DOCKERHUB_PAT}" | podman login docker.io --username "${DOCKERHUB_USER}" --password-stdin
 fi
 
 # Pull latest images from DockerHub
 echo "📦 Pulling images from DockerHub..."
-echo "Frontend: ${DOCKERHUB_USERNAME}/${FRONTEND_REPO_NAME}:${VERSION}"
-echo "Backend: ${DOCKERHUB_USERNAME}/${BACKEND_REPO_NAME}:${VERSION}"
+echo "Frontend: ${DOCKERHUB_USER}/${FRONTEND_REPO_NAME}:${VERSION}"
+echo "Backend: ${DOCKERHUB_USER}/${BACKEND_REPO_NAME}:${VERSION}"
 
-podman pull docker.io/${DOCKERHUB_USERNAME}/${FRONTEND_REPO_NAME}:${VERSION}
-podman pull docker.io/${DOCKERHUB_USERNAME}/${BACKEND_REPO_NAME}:${VERSION}
+podman pull docker.io/${DOCKERHUB_USER}/${FRONTEND_REPO_NAME}:${VERSION}
+podman pull docker.io/${DOCKERHUB_USER}/${BACKEND_REPO_NAME}:${VERSION}
 podman pull postgres:15-alpine
 
 # Stop existing containers gracefully
