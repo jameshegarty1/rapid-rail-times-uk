@@ -67,7 +67,7 @@ jobs:
           tags: ${{ env.DOCKERHUB_USERNAME }}/${{ secrets.BACKEND_REPO_NAME }}:v${{ env.VERSION }}
           build-args: |
             LDB_TOKEN=${{ env.LDB_TOKEN }}
-            WSDL=${{ secrets.WSDL }}
+            WSDL=${{ env.WSDL }}
         
 
   deploy-to-vm:
@@ -84,26 +84,21 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
-            cd /home/podman-user/rapid-rail-times-uk
-            
-            # Update to latest code
+            cd /home/podman-user/rapid-rail-times-uk 
             git pull origin master
-            
-            # Update version in .env file
-            if grep -q "^VERSION=" .env; then
-              sed -i "s/^VERSION=.*/VERSION=v${{ env.VERSION }}/" .env
-            else
-              echo "VERSION=v${{ env.VERSION }}" >> .env
-            fi
-            
-            # Deploy the new version
-            ./deploy.sh
-            
-            # Verify deployment
-            sleep 10
-            if curl -f http://localhost/health >/dev/null 2>&1 || curl -f http://localhost/ >/dev/null 2>&1; then
-              echo "✅ Deployment successful!"
-            else
-              echo "❌ Deployment may have failed - check logs"
-              exit 1
-            fi
+
+            cat > .env << EOF
+            VERSION=v${{ secrets.VERSION }}
+            DOCKERHUB_USER=${{ secrets.DOCKERHUB_USER }}
+            FRONTEND_REPO_NAME=${{ secrets.FRONTEND_REPO_NAME }}
+            BACKEND_REPO_NAME=${{ secrets.BACKEND_REPO_NAME }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            WSDL=${{ secrets.WSDL }}
+            LDB_TOKEN=${{ secrets.LDB_TOKEN }}
+            EOF
+
+            chmod 600 .env
+            ./deploy.sh 
