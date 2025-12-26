@@ -31,8 +31,7 @@ RUN mkdir -p /tmp/client_temp /tmp/proxy_temp_path /tmp/fastcgi_temp /tmp/uwsgi_
     touch /tmp/nginx.pid && \
     chown nginx:nginx /tmp/nginx.pid
 
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
-COPY nginx/default.conf.prod /etc/nginx/conf.d/default.conf
+#COPY nginx/default.conf.prod /etc/nginx/conf.d/default.conf
 
 COPY --from=build /app/dist /usr/share/nginx/html
 

@@ -1,0 +1,45 @@
+SSH to box:
+ssh root@49.13.169.21
+
+Run provisioning commands:
+
+dnf update -y
+
+
+# Add EPEL repo
+dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
+
+dnf install -y git podman podman-compose curl wget certbot vim
+
+systemctl enable --now podman.socket
+
+
+Create project dir:
+mkdir -p /opt/rtuk && cd /opt/rtuk
+
+Add .env file
+
+
+Add setup-ssl and renew-certs scripts
+
+Login to docker.io:
+echo $DOCKERHUB_PAT | podman login docker.io --username $DOCKERHUB_USER --password-stdin
+
+mkdir -p /root/.config/containers
+podman login --authfile /root/.config/containers/auth.json docker.io -u "$DOCKERH│~
+UB_USER" -p "$DOCKERHUB_PAT"
+
+
+Setup ssl scripts, expect output:
+Successfully received certificate.
+Certificate is saved at: /etc/letsencrypt/live/railtimes.net/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/railtimes.net/privkey.pem
+This certificate expires on 2026-03-26.
+These files will be updated when the certificate renews.
+NEXT STEPS:
+- The certificate will need to be renewed before it expires. Certbot can automatically renew the certificate in the background, but you may need to take steps to enable that functionality. See https://certbot.org/renewal-setup for instructions.
+
+
+Run database init commamds
+alembic upgrade head
+python in
