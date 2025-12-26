@@ -80,13 +80,11 @@ jobs:
       - name: Deploy to Hetzner VM
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          password: ${{ secrets.VM_PASSWORD }}
+          host: ${{ secrets.HETZNER_HOST }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/podman-user/rapid-rail-times-uk 
-            git pull origin master
-
+            cd /opt/rtuk/
             cat > .env << EOF
             VERSION=${{ secrets.VERSION }}
             DOCKERHUB_USER=${{ secrets.DOCKERHUB_USER }}
@@ -99,6 +97,7 @@ jobs:
             WSDL=${{ secrets.WSDL }}
             LDB_TOKEN=${{ secrets.LDB_TOKEN }}
             EOF
-
-            chmod 600 .env
-            ./deploy.sh 
+            
+            podman compose down
+            podman compose pull
+            podman compose up -d
