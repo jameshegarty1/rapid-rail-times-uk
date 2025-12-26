@@ -4,9 +4,8 @@ import axios from 'axios';
 
 // Set the base URL for the API
 const axiosInstance = axios.create({
-    // todo: change the name from REACT_APP
-    baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-});
+  // todo: change the name from REACT_APP
+  baseURL: ""});
 
 console.log(axiosInstance);
 

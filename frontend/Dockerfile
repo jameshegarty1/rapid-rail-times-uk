@@ -12,14 +12,6 @@ RUN npm ci
 # Copy the rest of the application code
 COPY . .
 
-# Define build arguments
-ARG VITE_API_URL
-
-# Set environment variables from build arguments
-ENV VITE_API_URL=$VITE_API_URL
-
-RUN echo "VITE_API_URL=$VITE_API_URL" > .env
-
 # Build the React app for production
 RUN npm run build
 
